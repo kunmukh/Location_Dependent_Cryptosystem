@@ -4,10 +4,10 @@
 # Programmer: Kunal Mukherjee                       # Date completed:
 
 server: server.o
-		g++ -Wall server.o -o server
+		clang -Wall -lmcrypt server.o -o server
 
 server.o: server.c
-		g++ -Wall -c server.c
+		clang -Wall -c server.c
 
 clean:
 		rm -f *.o *~ server
