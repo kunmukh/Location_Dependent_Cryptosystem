@@ -36,12 +36,21 @@ void display(char* ciphertext, int len);
 
 int main(int argc, char const *argv[])
 {
-	  char * plaintext = "test text 123";
-	  char* IV = "AAAAAAAAAAAAAAAA";
-	  char *key = "0123456789abcdef";
-	  int keysize = 16; /* 128 bits */
-	  char* buffer;
-	  int buffer_len = 16;
+	  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
+	  char * plaintext = "test text 123test text 123";
+	  //A random block should be placed as the first block (IV) 
+	  //so the same block or messages always encrypt to something different.
+	  char * IV = malloc(mcrypt_enc_get_iv_size(td)); //return 8
+	  FILE *fp;
+    fp = fopen("/dev/urandom", "r");
+    fread(IV, 1, mcrypt_enc_get_iv_size(td), fp);
+    fclose(fp);
+    mcrypt_generic_end(td);
+
+	  char * key = "0123456789abcdef0123456789abcdef"; //32 * 8 = 128
+	  char * buffer;
+	  int keysize = 32; /* 256 bits */ 
+	  int buffer_len = 32;
 
 	  buffer = calloc(1, buffer_len);
 	  strncpy(buffer, plaintext, buffer_len);
@@ -59,7 +68,7 @@ int main(int argc, char const *argv[])
 
 int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
 {
-  MCRYPT td = mcrypt_module_open("rijndael-128", NULL, "cbc", NULL);
+  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
   int blocksize = mcrypt_enc_get_block_size(td);
   if( buffer_len % blocksize != 0 ){return 1;}
 
@@ -73,7 +82,7 @@ int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
 
 int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
 {
-  MCRYPT td = mcrypt_module_open("rijndael-128", NULL, "cbc", NULL);
+  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
   int blocksize = mcrypt_enc_get_block_size(td);
   if( buffer_len % blocksize != 0 ){return 1;}
   
