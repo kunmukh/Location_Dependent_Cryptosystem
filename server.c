@@ -31,7 +31,7 @@ int decrypt(
 );
 
 //cipher text displyer
-void display(char* ciphertext, int len, FILE * encyptFile);
+void printEncryptedFile(char* ciphertext, int len, FILE * encyptFile);
 
 
 int main(int argc, char const *argv[])
@@ -78,12 +78,12 @@ int main(int argc, char const *argv[])
     while(fgets(buffer, sizeof buffer, inputFile) != NULL)
     {
       //process buffer     
-      printf("==C==\n");      
+      printf("==Location-Dependent Algorithm==\n");      
       encrypt(buffer, buffer_len, IV, key, keysize);
       printf("Encryption Completed\n"); 
 
       printf("cipher:  "); 
-      display(buffer , buffer_len , encyptFile);
+      printEncryptedFile(buffer , buffer_len , encyptFile);
       
       decrypt(buffer, buffer_len, IV, key, keysize);
       fprintf(outputFile, "%s", buffer);
@@ -132,12 +132,12 @@ int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
 }
 
 //displays as well as writes the encrypt file
-void display(char* ciphertext, int len, FILE * encyptFile)
+void printEncryptedFile(char* ciphertext, int len, FILE * encyptFile)
 {
   int v;
   for (v=0; v<len; v++)
   {
-    printf("%d ", ciphertext[v]);
+    //printf("%d ", ciphertext[v]);
     fprintf(encyptFile, "%d", ciphertext[v]);
     fprintf(encyptFile, "%s", " ");
   }
