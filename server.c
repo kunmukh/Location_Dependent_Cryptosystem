@@ -31,13 +31,35 @@ int decrypt(
 );
 
 //cipher text displyer
-void display(char* ciphertext, int len);
+void display(char* ciphertext, int len, FILE * encyptFile);
 
 
 int main(int argc, char const *argv[])
 {
-	  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
-	  char * plaintext = "test text 123test text 123";
+	  //check to see if all the argv is entred
+    if (argc != 5)
+    {
+      printf("Usage: ./server <inputfile> <password> <outputfile> <encryptfile>\n");
+    }   
+
+    //open the respective files
+    FILE * inputFile;
+    inputFile = fopen(argv[1],"r");
+
+    //check to see if the key is 32 charcter long
+    char * key; //32 * 8 = 128
+    key = calloc(1, 32);
+    strncpy(key, argv[2], 32);
+
+    FILE * outputFile;
+    outputFile = fopen(argv[3],"w");
+
+    FILE * encyptFile;
+    encyptFile = fopen(argv[4],"w");
+
+    //create a MCRYPT to get certain info
+    MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
+	  
 	  //A random block should be placed as the first block (IV) 
 	  //so the same block or messages always encrypt to something different.
 	  char * IV = malloc(mcrypt_enc_get_iv_size(td)); //return 8
@@ -45,25 +67,40 @@ int main(int argc, char const *argv[])
     fp = fopen("/dev/urandom", "r");
     fread(IV, 1, mcrypt_enc_get_iv_size(td), fp);
     fclose(fp);
-    mcrypt_generic_end(td);
-
-	  char * key = "0123456789abcdef0123456789abcdef"; //32 * 8 = 128
-	  char * buffer;
+    mcrypt_generic_end(td);	  
+	  
 	  int keysize = 32; /* 256 bits */ 
 	  int buffer_len = 32;
+    char * buffer;
 
-	  buffer = calloc(1, buffer_len);
-	  strncpy(buffer, plaintext, buffer_len);
+	  buffer = calloc(1, buffer_len);    
 
-	  printf("==C==\n");
-	  printf("plain:   %s\n", plaintext);
-	  encrypt(buffer, buffer_len, IV, key, keysize); 
-	  printf("cipher:  "); 
-	  display(buffer , buffer_len);
-	  decrypt(buffer, buffer_len, IV, key, keysize);
-	  printf("decrypt: %s\n", buffer);
+    while(fgets(buffer, sizeof buffer, inputFile) != NULL)
+    {
+      //process buffer     
+      printf("==C==\n");      
+      encrypt(buffer, buffer_len, IV, key, keysize);
+      printf("Encryption Completed\n"); 
 
-	  return 0;
+      printf("cipher:  "); 
+      display(buffer , buffer_len , encyptFile);
+      
+      decrypt(buffer, buffer_len, IV, key, keysize);
+      fprintf(outputFile, "%s", buffer);
+      printf("Decryption Completed\n");      
+    }
+    if (feof(inputFile)) 
+    {
+      // hit end of file
+      printf("Process Completed\n");
+    }  
+
+    fclose(inputFile);
+    fclose(outputFile);
+    fclose(encyptFile);
+    free(key);
+    free(buffer);
+    return 0;
 }	
 
 int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
@@ -94,12 +131,16 @@ int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
   return 0;
 }
 
-void display(char* ciphertext, int len)
+//displays as well as writes the encrypt file
+void display(char* ciphertext, int len, FILE * encyptFile)
 {
   int v;
   for (v=0; v<len; v++)
   {
     printf("%d ", ciphertext[v]);
+    fprintf(encyptFile, "%d", ciphertext[v]);
+    fprintf(encyptFile, "%s", " ");
   }
   printf("\n");
+  fprintf(encyptFile, "%s", "\n");
 }
