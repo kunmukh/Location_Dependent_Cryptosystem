@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <mcrypt.h> //http://linux.die.net/man/3/mcrypt
 
+//defining the max charc size
+#define MAX_CHARACTER_SIZE 32
+
 //the encrypt function
 int encrypt(
     void* buffer,
@@ -40,22 +43,18 @@ int main(int argc, char const *argv[])
     if (argc != 5)
     {
       printf("Usage: ./server <inputfile> <password> <outputfile> <encryptfile>\n");
+      return 0;
     }   
 
     //open the respective files
     FILE * inputFile;
-    inputFile = fopen(argv[1],"r");
-
-    //check to see if the key is 32 charcter long
-    char * key; //32 * 8 = 128
-    key = calloc(1, 32);
-    strncpy(key, argv[2], 32);
+    inputFile = fopen(argv[1],"r");    
 
     FILE * outputFile;
     outputFile = fopen(argv[3],"w");
 
-    FILE * encyptFile;
-    encyptFile = fopen(argv[4],"w");
+    FILE * encyptFileOutput;
+    encyptFileOutput = fopen(argv[4],"w");
 
     //create a MCRYPT to get certain info
     MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
@@ -63,41 +62,87 @@ int main(int argc, char const *argv[])
 	  //A random block should be placed as the first block (IV) 
 	  //so the same block or messages always encrypt to something different.
 	  char * IV = malloc(mcrypt_enc_get_iv_size(td)); //return 8
-	  FILE *fp;
+	  FILE * fp;
     fp = fopen("/dev/urandom", "r");
     fread(IV, 1, mcrypt_enc_get_iv_size(td), fp);
     fclose(fp);
     mcrypt_generic_end(td);	  
-	  
-	  int keysize = 32; /* 256 bits */ 
-	  int buffer_len = 32;
-    char * buffer;
 
+    //check to see if the key is MAX_CHARACTER_SIZE charcter long
+    char * key; //MAX_CHARACTER_SIZE * 8 = 128
+    key = calloc(1, MAX_CHARACTER_SIZE);
+    strncpy(key, argv[2], MAX_CHARACTER_SIZE);
+	  
+	  int keysize = MAX_CHARACTER_SIZE; /* 256 bits */ 
+	  int buffer_len = MAX_CHARACTER_SIZE;
+    
+    char * buffer;
 	  buffer = calloc(1, buffer_len);    
+
+    //Encryption algorithm
+    printf("==Location-Dependent Algorithm==\n");
+    printf("The Key is: %s\n", key);
+    printf("The IV is: %s\n", IV);
 
     while(fgets(buffer, sizeof buffer, inputFile) != NULL)
     {
-      //process buffer     
-      printf("==Location-Dependent Algorithm==\n");      
-      encrypt(buffer, buffer_len, IV, key, keysize);
-      printf("Encryption Completed\n"); 
-
-      printf("cipher:  "); 
-      printEncryptedFile(buffer , buffer_len , encyptFile);
-      
-      decrypt(buffer, buffer_len, IV, key, keysize);
-      fprintf(outputFile, "%s", buffer);
-      printf("Decryption Completed\n");      
+      //process buffer           
+      encrypt(buffer, buffer_len, IV, key, keysize);            
+      printEncryptedFile(buffer , buffer_len , encyptFileOutput);     
+      //printf("Encryption Part Done\n");     
     }
     if (feof(inputFile)) 
     {
       // hit end of file
-      printf("Process Completed\n");
-    }  
-
+      printf("Encryption Process Completed\n");
+    }    
     fclose(inputFile);
+    fclose(encyptFileOutput); 
+    free(buffer); 
+
+    //decryption algorithm
+    FILE * encyptFileInput;
+    encyptFileInput = fopen(argv[4],"r");
+    
+    //clear buffer
+    buffer = calloc(1, buffer_len);
+
+    //decryption part started
+    int  AESbuf;
+    int bufIndex = 0;
+
+    while(fscanf(encyptFileInput, "%d" , &AESbuf) != EOF)
+    {        
+      if(bufIndex < MAX_CHARACTER_SIZE)
+      {
+        buffer[bufIndex] = AESbuf;
+        bufIndex++;  
+      }
+      else
+      {             
+        decrypt(buffer, buffer_len, IV, key, keysize);
+        fprintf(outputFile, "%s", buffer);
+        //printf("Decryption Part Done\n");      
+
+        bufIndex = 0;
+        memset(buffer, 0 , MAX_CHARACTER_SIZE);
+        buffer[bufIndex] = AESbuf;
+        bufIndex++;
+      }        
+    }
+
+    if( strlen(buffer) != 0)
+    {
+      decrypt(buffer, buffer_len, IV, key, keysize);
+      fprintf(outputFile, "%s", buffer);
+      //printf("Decryption Part Done\n");  
+    } 
+
+    printf("Decryption Process Completed\n");
+
+    fclose(encyptFileInput);
     fclose(outputFile);
-    fclose(encyptFile);
+
     free(key);
     free(buffer);
     return 0;
@@ -140,7 +185,7 @@ void printEncryptedFile(char* ciphertext, int len, FILE * encyptFile)
     //printf("%d ", ciphertext[v]);
     fprintf(encyptFile, "%d", ciphertext[v]);
     fprintf(encyptFile, "%s", " ");
-  }
-  printf("\n");
+  }  
+  
   fprintf(encyptFile, "%s", "\n");
 }
