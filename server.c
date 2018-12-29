@@ -34,8 +34,9 @@ int decrypt(
 );
 
 //cipher text displyer
-void printEncryptedFile(char* ciphertext, int len, FILE * encyptFile);
-
+void printEncryptedFile(char* ciphertext, 
+                        int len, 
+                        FILE * encyptFile);
 
 int main(int argc, char const *argv[])
 {
@@ -61,34 +62,32 @@ int main(int argc, char const *argv[])
 	  
 	  //A random block should be placed as the first block (IV) 
 	  //so the same block or messages always encrypt to something different.
-	  char * IV = malloc(mcrypt_enc_get_iv_size(td)); //return 8
+	  char * IVEncr = malloc(mcrypt_enc_get_iv_size(td)); //return 8
 	  FILE * fp;
     fp = fopen("/dev/urandom", "r");
-    fread(IV, 1, mcrypt_enc_get_iv_size(td), fp);
+    fread(IVEncr, 1, mcrypt_enc_get_iv_size(td), fp);
     fclose(fp);
     mcrypt_generic_end(td);	  
+    printEncryptedFile(IVEncr , mcrypt_enc_get_iv_size(td) , encyptFileOutput);
 
     //check to see if the key is MAX_CHARACTER_SIZE charcter long
-    char * key; //MAX_CHARACTER_SIZE * 8 = 128
-    key = calloc(1, MAX_CHARACTER_SIZE);
-    strncpy(key, argv[2], MAX_CHARACTER_SIZE);
-	  
-	  int keysize = MAX_CHARACTER_SIZE; /* 256 bits */ 
-	  int buffer_len = MAX_CHARACTER_SIZE;
-    
-    char * buffer;
-	  buffer = calloc(1, buffer_len);    
+    char * keyEncr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
+    strncpy(keyEncr, argv[2], MAX_CHARACTER_SIZE);	  
+	  int keyEncrsize = MAX_CHARACTER_SIZE; /* 256 bits */ 
 
+	  int bufferEncr_len = MAX_CHARACTER_SIZE;    
+    char * bufferEncr = calloc(1, bufferEncr_len); 
+	  
     //Encryption algorithm
     printf("==Location-Dependent Algorithm==\n");
-    printf("The Key is: %s\n", key);
-    printf("The IV is: %s\n", IV);
+    printf("The Key is: %s\n", keyEncr);
+    printf("The IV is: %s\n", IVEncr);
 
-    while(fgets(buffer, sizeof buffer, inputFile) != NULL)
+    while(fgets(bufferEncr, sizeof bufferEncr, inputFile) != NULL)
     {
       //process buffer           
-      encrypt(buffer, buffer_len, IV, key, keysize);            
-      printEncryptedFile(buffer , buffer_len , encyptFileOutput);     
+      encrypt(bufferEncr, bufferEncr_len, IVEncr, keyEncr, keyEncrsize);            
+      printEncryptedFile(bufferEncr , bufferEncr_len , encyptFileOutput);     
       //printf("Encryption Part Done\n");     
     }
     if (feof(inputFile)) 
@@ -96,55 +95,83 @@ int main(int argc, char const *argv[])
       // hit end of file
       printf("Encryption Process Completed\n");
     }    
+
+    //closing file and free memory after encryption
     fclose(inputFile);
-    fclose(encyptFileOutput); 
-    free(buffer); 
+    fclose(encyptFileOutput);
+
+    free(IVEncr);
+    free(bufferEncr);
+    free(keyEncr);
 
     //decryption algorithm
     FILE * encyptFileInput;
-    encyptFileInput = fopen(argv[4],"r");
-    
-    //clear buffer
-    buffer = calloc(1, buffer_len);
+    encyptFileInput = fopen(argv[4],"r");    
 
-    //decryption part started
-    int  AESbuf;
+    //initialize decrypt buffer
+    int bufferDecr_len = MAX_CHARACTER_SIZE;
+    char * bufferDecr = calloc(1, bufferDecr_len);
+
+    //initialize the key
+    char * keyDecr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
+    strncpy(keyDecr, argv[2], MAX_CHARACTER_SIZE);    
+    int keyDecrsize = MAX_CHARACTER_SIZE;
+    
+    //getting IV
+    char * IVDecr = calloc(1, MAX_CHARACTER_SIZE);
+    int IVBuf = 0;
+
+    for (int i = 0; i < MAX_CHARACTER_SIZE; i++)
+    {
+      fscanf(encyptFileInput, "%d" , &IVBuf);
+      IVDecr[i] = IVBuf;
+    }
+
+    printf("The IV is: %s\n", IVDecr);
+    printf("The Key is: %s\n", keyDecr);
+
+    //initilizing he tempAESbuffer and bufferIndex
+    int  AESbuf = 0;
     int bufIndex = 0;
 
+    //getting the AES blocks and decrypting it
     while(fscanf(encyptFileInput, "%d" , &AESbuf) != EOF)
     {        
       if(bufIndex < MAX_CHARACTER_SIZE)
       {
-        buffer[bufIndex] = AESbuf;
+        bufferDecr[bufIndex] = AESbuf;
         bufIndex++;  
       }
       else
       {             
-        decrypt(buffer, buffer_len, IV, key, keysize);
-        fprintf(outputFile, "%s", buffer);
+        decrypt(bufferDecr, bufferDecr_len, IVDecr, keyDecr, keyDecrsize);
+        fprintf(outputFile, "%s", bufferDecr);
         //printf("Decryption Part Done\n");      
 
         bufIndex = 0;
-        memset(buffer, 0 , MAX_CHARACTER_SIZE);
-        buffer[bufIndex] = AESbuf;
+        memset(bufferDecr, 0 , MAX_CHARACTER_SIZE);
+        bufferDecr[bufIndex] = AESbuf;
         bufIndex++;
       }        
     }
 
-    if( strlen(buffer) != 0)
+    if( strlen(bufferDecr) != 0)
     {
-      decrypt(buffer, buffer_len, IV, key, keysize);
-      fprintf(outputFile, "%s", buffer);
+      decrypt(bufferDecr, bufferDecr_len, IVDecr, keyDecr, keyDecrsize);
+      fprintf(outputFile, "%s", bufferDecr);
       //printf("Decryption Part Done\n");  
     } 
 
     printf("Decryption Process Completed\n");
 
+    //closing the output file and free memory    
     fclose(encyptFileInput);
     fclose(outputFile);
 
-    free(key);
-    free(buffer);
+    free(keyDecr);
+    free(bufferDecr);    
+    free(IVDecr);
+
     return 0;
 }	
 
