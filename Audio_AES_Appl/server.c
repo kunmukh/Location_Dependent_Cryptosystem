@@ -5,11 +5,10 @@
 
 //adding the header files
 #include <stdio.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <mcrypt.h> //http://linux.die.net/man/3/mcrypt
 
 //defining the max charc size
@@ -41,12 +40,14 @@ void printEncryptedFile(char* ciphertext,
 int main(int argc, char const *argv[])
 {
 	  //check to see if all the argv is entred
-    /*if (argc != 5)
+    if (argc != 2)
     {
-      printf("Usage: ./server <inputAudiofile> <password> <outputAudiofile> <encryptfile>\n");
+      printf("Usage: ./server <password> \n");
       return 0;
-    }   */
+    }  
 
+    //Step 1: Take Audio file -> Digitalize the signal
+    printf("==Location-Dependent Algorithm==\n");
     //open the respective files // 44.1 * 15100
     FILE * inputAudiofile;   
     inputAudiofile  = popen("ffmpeg -i input.wav -hide_banner -f s16le -ac 1 -", "r");    
@@ -59,46 +60,20 @@ int main(int argc, char const *argv[])
 
     while( fread(&audioSample, 2, 1, inputAudiofile)) // read one 2-byte sample
     {   
-        fprintf(tempAudiosampleFile, "%d\n", audioSample);       
+        fprintf(tempAudiosampleFile, "%hd ", audioSample);       
     }
  
     pclose(inputAudiofile); 
     fclose(tempAudiosampleFile);
 
-    //opening a temp file to put the values in
-    FILE * outputAudiofile;
-    outputAudiofile = popen("ffmpeg -y -f s16le -ar 44100 -ac 1 -i - output.wav -hide_banner", "w");
+    printf("\nAudio file extractd and audio sample file created.\n");
 
-    FILE * tempAudiosampleFileInput;
-    tempAudiosampleFileInput = fopen("tempAud.txt","r");
-
-    int16_t audioSampleRead;
-
-    while(fscanf(tempAudiosampleFileInput, "%hd" , &audioSampleRead) != EOF)
-    {
-        fwrite(&audioSampleRead, 2, 1, outputAudiofile);
-    }
-     
-    // Close input and output pipes       
-    pclose(outputAudiofile);    
-    fclose(tempAudiosampleFileInput);
-
-    /*FILE *csvfile;
-    csvfile = fopen("samInputAudio.csv", "w");
-    for (int n = 0; n < N; n++)
-    {
-    	fprintf(csvfile, "%d\n", bufAud[n] );
-    }
-    fclose(csvfile);*/
-
-    
-
-    /*
-    FILE * outputFile;
-    outputFile = fopen(argv[3],"w");
+    //Step 2: Take the digitalized signal and encode with AES
+    FILE * inputFile;
+    inputFile = fopen("tempAud.txt","r"); 
 
     FILE * encyptFileOutput;
-    encyptFileOutput = fopen(argv[4],"w");
+    encyptFileOutput = fopen("EncrFileOutput.txt","w");
 
     //create a MCRYPT to get certain info
     MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
@@ -115,14 +90,13 @@ int main(int argc, char const *argv[])
 
     //check to see if the key is MAX_CHARACTER_SIZE charcter long
     char * keyEncr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
-    strncpy(keyEncr, argv[2], MAX_CHARACTER_SIZE);	  
-	  int keyEncrsize = MAX_CHARACTER_SIZE; /* 256 bits 
+    strncpy(keyEncr, argv[1], MAX_CHARACTER_SIZE);	  
+	  int keyEncrsize = MAX_CHARACTER_SIZE; /* 256 bits */
 
 	  int bufferEncr_len = MAX_CHARACTER_SIZE;    
     char * bufferEncr = calloc(1, bufferEncr_len); 
 	  
-    //Encryption algorithm
-    printf("==Location-Dependent Algorithm==\n");
+    //Encryption algorithm    
     printf("The Key is: %s\n", keyEncr);
     printf("The IV is: %s\n", IVEncr);
 
@@ -136,7 +110,7 @@ int main(int argc, char const *argv[])
     if (feof(inputFile)) 
     {
       // hit end of file
-      printf("Encryption Process Completed\n");
+      printf("\nEncryption Process Completed\n");
     }    
 
     //closing file and free memory after encryption
@@ -147,9 +121,13 @@ int main(int argc, char const *argv[])
     free(bufferEncr);
     free(keyEncr);
 
+    //Step3: Take the AES encoding and convert it back to digitalized signal
     //decryption algorithm
+    FILE * outputFile;
+    outputFile = fopen("DecrOutput.txt","w");
+
     FILE * encyptFileInput;
-    encyptFileInput = fopen(argv[4],"r");    
+    encyptFileInput = fopen("EncrFileOutput.txt","r");    
 
     //initialize decrypt buffer
     int bufferDecr_len = MAX_CHARACTER_SIZE;
@@ -157,7 +135,7 @@ int main(int argc, char const *argv[])
 
     //initialize the key
     char * keyDecr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
-    strncpy(keyDecr, argv[2], MAX_CHARACTER_SIZE);    
+    strncpy(keyDecr, argv[1], MAX_CHARACTER_SIZE);    
     int keyDecrsize = MAX_CHARACTER_SIZE;
     
     //getting IV
@@ -205,7 +183,7 @@ int main(int argc, char const *argv[])
       //printf("Decryption Part Done\n");  
     } 
 
-    printf("Decryption Process Completed\n");
+    printf("\nDecryption Process Completed\n");
 
     //closing the output file and free memory    
     fclose(encyptFileInput);
@@ -215,8 +193,27 @@ int main(int argc, char const *argv[])
     free(bufferDecr);    
     free(IVDecr);
 
-    return 0;*/
+    //Step 4: Convert the decrypted file to Audio
+    printf("\nConvert the decrypted audio sample to audio file\n");
+    //opening a temp file to put the values in
+    FILE * outputAudiofile;
+    outputAudiofile = popen("ffmpeg -y -f s16le -ar 44100 -ac 1 -i - output.wav -hide_banner", "w");
 
+    FILE * tempAudiosampleFileInput;
+    tempAudiosampleFileInput = fopen("DecrOutput.txt","r");
+
+    int16_t audioSampleRead;
+
+    while(fscanf(tempAudiosampleFileInput, "%hd" , &audioSampleRead) != EOF)
+    {
+        fwrite(&audioSampleRead, 2, 1, outputAudiofile);
+    }
+     
+    // Close input and output pipes       
+    pclose(outputAudiofile);    
+    fclose(tempAudiosampleFileInput);
+
+    return 0;
 }	
 
 int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)

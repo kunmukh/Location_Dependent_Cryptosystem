@@ -24,7 +24,7 @@ int main(int argc, char const *argv[])
 
     while( fread(&audioSample, 2, 1, inputAudiofile)) // read one 2-byte sample
     {   
-        fprintf(tempAudiosampleFile, "%d\n", audioSample);       
+        fprintf(tempAudiosampleFile, "%hd ", audioSample);       
     }
  
     pclose(inputAudiofile); 
