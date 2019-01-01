@@ -97,8 +97,8 @@ int main(int argc, char const *argv[])
     char * bufferEncr = calloc(1, bufferEncr_len); 
 	  
     //Encryption algorithm    
-    printf("The Key is: %s\n", keyEncr);
     printf("The IV is: %s\n", IVEncr);
+    printf("The Key is: %s\n", keyEncr);    
 
     while(fgets(bufferEncr, sizeof bufferEncr, inputFile) != NULL)
     {
