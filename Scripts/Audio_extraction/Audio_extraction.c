@@ -48,6 +48,10 @@ int main(int argc, char const *argv[])
     pclose(outputAudiofile);    
     fclose(tempAudiosampleFileInput);    
 
+    FILE * playResultAudio;
+    playResultAudio = popen("ffplay -hide_banner -autoexit output.wav", "r");
+    pclose (playResultAudio);
+
     return 0;
 }	
 

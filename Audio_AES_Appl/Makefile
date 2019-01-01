@@ -10,4 +10,4 @@ server.o: server.c
 		clang -Wall -c server.c
 
 clean:
-		rm -f *.o *~ server
+		rm -f *.o *~ server DecrOutput.txt tempAud.txt EncrFileOutput.txt output.wav
