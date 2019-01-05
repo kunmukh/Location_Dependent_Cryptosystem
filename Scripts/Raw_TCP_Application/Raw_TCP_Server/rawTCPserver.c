@@ -12,8 +12,9 @@
 #include "tcp_ip_packet.h"
 
 #define P 25    /* lets flood the sendmail port */ 
+#define MAX_CHARACTER_SIZE 32
 
-int main (void)
+int main (int argc, char const *argv[])
 {
   	int s = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);  /* open raw socket */
 
@@ -25,41 +26,87 @@ int main (void)
   	char datagram[4096];   
   	memset (datagram, 0, 4096);
 
-  	char * data;
   	char * code;
+  	char * data = calloc(0, MAX_CHARACTER_SIZE);  	
+
+  	FILE * textin;
+    textin = fopen(argv[1],"r");
+
+  	int AESbuf = 0, bufIndex = 0 ;
 
   	code = "0xABCD";
-  	data = "Source IP: 192.168.1.12 Port: 2016  Destination IP: 192.168.1.18 Port: 2020 This is a test message.";
+
+    int counter = 0;
+
+  	while(fscanf(textin, "%d" , &AESbuf) != EOF)
+    {        
+      	if(bufIndex < MAX_CHARACTER_SIZE)
+      	{
+     	      data[bufIndex] = AESbuf;
+     	      bufIndex++;  
+     	  }
+
+       	else
+       	{             
+         	 	unsigned short int ip_len; 
+         		char * newDatagram = createDatagram(datagram, P, code, data, sin, &ip_len);
+         	         
+         	    //***
+         	    int one = 1;
+         	    const int *val = &one;
+         	    if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
+         	    {    	
+         	     	printf ("Warning: Cannot set HDRINCL!\n");
+         	    }  
+         	    //****
+
+         	    if (sendto (s, newDatagram, ip_len, 0, (struct sockaddr *) &sin, sizeof (sin)) < 0)    
+         	    {
+         	    	printf ("error\n");
+         	    }  
+         	    else
+         	    {
+         	      	printf ("send Packtet Num: %d \n", counter); 
+                  counter++;      	      	       	      	      		
+         	    }
+
+              bufIndex = 0;
+              memset (datagram, 0, 32);
+
+              data[bufIndex] = AESbuf;
+              bufIndex++; 
+
+              usleep(2);
+
+     		}	  
   
- 	unsigned short int ip_len; 
-	char * newDatagram = createDatagram(datagram, P, code, data, sin, &ip_len);
+    }
 
-
-/* finally, it is very advisable to do a IP_HDRINCL call, to make sure
-   that the kernel knows the header is included in the data, and doesn't
-   insert its own header into the packet before our data */
+    code = "0xABCE";
+    unsigned short int ip_len; 
+    char * newDatagram = createDatagram(datagram, P, code, data, sin, &ip_len);
          
+    //***
     int one = 1;
     const int *val = &one;
     if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
-    {    	
-     	printf ("Warning: Cannot set HDRINCL!\n");
-    }
-    
-
-  	while (1)
+    {     
+      printf ("Warning: Cannot set HDRINCL!\n");
+    }  
+    //****
+    if (sendto (s, newDatagram, ip_len, 0, (struct sockaddr *) &sin, sizeof (sin)) < 0)    
     {
-      if (sendto (s, newDatagram, ip_len, 0, (struct sockaddr *) &sin, sizeof (sin)) < 0)    
-    	{
-    		printf ("error\n");
-    	}  
-      else
-      	{
-      		printf ("send\n");
-      		break;      		
-     	}  
-  
+      printf ("error\n");
+    }  
+    else
+    {
+        counter++; 
+        printf ("send Terminating Sequence. Packet Num: %d Last Char: %c\n", counter 
+          , data[MAX_CHARACTER_SIZE -1]);                 
     }
+
+    free (data);
+    
 
   return 0;
 }

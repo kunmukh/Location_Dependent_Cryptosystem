@@ -3,11 +3,11 @@
 # Assignment: Location-Dept Cryptosystem            # Date started: 1/4/2018
 # Programmer: Kunal Mukherjee                       # Date completed:
 
-server: rawTCPserver.o
-		clang -Wall -lmcrypt rawTCPserver.o -o server
+client: rawTCPclient.o
+		clang -Wall -lmcrypt rawTCPclient.o -o client
 
-rawTCPserver.o: rawTCPserver.c tcp_ip_packet.h
-		clang -Wall -c rawTCPserver.c
+rawTCPclient.o: rawTCPclient.c
+		clang -Wall -c rawTCPclient.c
 
 clean:
-		rm -f *.o *~ server
+		rm -f *.o *~ client textOut.txt

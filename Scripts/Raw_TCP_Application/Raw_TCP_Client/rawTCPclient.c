@@ -9,6 +9,25 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+
+#define MAX_CHARACTER_SIZE 32
+
+//displays as well as writes the encrypt file
+void printEncryptedFile(char* ciphertext, int len, FILE* encyptFile)
+{
+  int v;
+  for (v=0; v<len; v++)
+  {    
+    fprintf(encyptFile, "%d", ciphertext[v]);    
+    fprintf(encyptFile, "%s", " ");
+    //printf("%d ", ciphertext[v]);
+  }  
+  
+  fprintf(encyptFile, "%s", "\n");
+  //printf("\n");
+}
 
 int main(int argc, char const *argv[])
 {
@@ -19,28 +38,45 @@ int main(int argc, char const *argv[])
 		printf("Socket cannot be opend. Need root permission\n");
 		return -1;
 	}
+
+	FILE * textOut;
+    textOut = fopen("textOut.txt","w");
+
 	char buffer[8192]; /* single packets are usually not bigger than 8192 bytes */	
+
+	int counter = 0;
 
 	while (read (fd, buffer, 8192) > 0)
 	{		
-		printf ("Caught tcp packet.\n");		
-		
 		if (strncmp( &buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr)],
 		 "0xABCD", strlen("0xABCD")) == 0)
 		{
-			printf ("The packet: %s\n", 
-			&buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCD")]);
+			printf("TCP Pack Received. Packet Number: %d\n", counter);
+			printEncryptedFile(
+				&buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCD")],
+				 MAX_CHARACTER_SIZE, textOut);
+			counter++;			
 		}
-		else
+
+		if (strncmp( &buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr)],
+		 "0xABCE", strlen("0xABCE")) == 0)
 		{
-			printf ("The TCP: %s\n", 
-			&buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr)]);
+			printf("TCP Pack Received.\n");
+			printEncryptedFile(
+				&buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCE")],
+				 MAX_CHARACTER_SIZE, textOut);	
+			
+			counter++;	 		
+			printf("TCP Sequence Received. Counter: %d Last Charater: %c\n", counter,
+				buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCD") 
+					+ MAX_CHARACTER_SIZE - 1]);
+			fclose (textOut);
+			break; 
 		}		
 
+		memset (buffer, 0, 8192);
 		
-		 memset (buffer, 0, 8192);
-		
-	}
+	}	
 
 	return 0;
 }
