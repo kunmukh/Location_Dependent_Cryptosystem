@@ -19,14 +19,27 @@ int main(int argc, char const *argv[])
 		printf("Socket cannot be opend. Need root permission\n");
 		return -1;
 	}
-	char buffer[8192]; /* single packets are usually not bigger than 8192 bytes */
+	char buffer[8192]; /* single packets are usually not bigger than 8192 bytes */	
 
 	while (read (fd, buffer, 8192) > 0)
-	{
-		printf ("Caught tcp packet: %s\n", 
-			buffer+sizeof(struct iphdr)+sizeof(struct tcphdr));
+	{		
+		printf ("Caught tcp packet.\n");		
+		
+		if (strncmp( &buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr)],
+		 "0xABCD", strlen("0xABCD")) == 0)
+		{
+			printf ("The packet: %s\n", 
+			&buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCD")]);
+		}
+		else
+		{
+			printf ("The TCP: %s\n", 
+			&buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr)]);
+		}		
 
-		memset (buffer, 0, 8192);
+		
+		 memset (buffer, 0, 8192);
+		
 	}
 
 	return 0;

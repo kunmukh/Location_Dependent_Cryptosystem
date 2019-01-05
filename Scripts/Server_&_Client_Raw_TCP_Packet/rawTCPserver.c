@@ -67,17 +67,22 @@ int main (void)
   sin.sin_addr.s_addr = inet_addr ("127.0.0.1");
 
   memset (datagram, 0, 4096); /* zero out the buffer */
+
   char * data;
-  data = datagram + sizeof (struct ip) + sizeof (struct tcphdr); 
-  strcpy(data, "Source IP: 192.168.1.12 Port: 2016  Destination IP: 192.168.1.18 Port: 2020 This is a test message.");
- 
+  char * code;
+
+  code = "0xABCD";
+  data = "Source IP: 192.168.1.12 Port: 2016  Destination IP: 192.168.1.18 Port: 2020 This is a test message.";
+  
+  strcpy(&datagram[sizeof (struct ip) + sizeof (struct tcphdr)], code);
+  strcpy(&datagram[sizeof (struct ip) + sizeof (struct tcphdr)] + strlen (code), data); 
  
 
 /* we'll now fill in the ip/tcp header values, see above for explanations */
   iph->ip_hl = 5;
   iph->ip_v = 4;
   iph->ip_tos = 0;
-  iph->ip_len = sizeof (struct ip) + sizeof (struct tcphdr) + strlen (data);  /* no payload */
+  iph->ip_len = sizeof (struct ip) + sizeof (struct tcphdr) + strlen (code)+ strlen (data); 
   iph->ip_id = htonl (54321); /* the value doesn't matter here */
   iph->ip_off = 0;
   iph->ip_ttl = 255;
