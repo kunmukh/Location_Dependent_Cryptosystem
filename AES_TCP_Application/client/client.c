@@ -58,7 +58,7 @@ int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
 
 int main(int argc, char const *argv[])
 {
-	/*//Step 1: Setting Up socket  
+  //Step 1: Setting Up socket  
   int fd = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);
 
   if (fd == -1)
@@ -102,7 +102,7 @@ int main(int argc, char const *argv[])
       break; 
     }   
      memset (buffer, 0, 8192);        
-  }*/
+  }
 
     //Step 2: Take the AES encoding and convert it back to digitalized signal
     //decryption algorithm
@@ -114,7 +114,7 @@ int main(int argc, char const *argv[])
     encyptFileInput = fopen("EncrFileOutput.txt","r");
 
     FILE * outputFile;
-    outputFile = fopen("DecrOutput.txt","w");        
+    outputFile = fopen("DecrOutput.txt","w");  //write protected file      
 
     //initialize decrypt buffer
     int bufferDecr_len = MAX_CHARACTER_SIZE;
@@ -149,13 +149,13 @@ int main(int argc, char const *argv[])
       if(bufIndex < MAX_CHARACTER_SIZE)
       {
         bufferDecr[bufIndex] = AESbuf;
-        bufIndex++;  
+        bufIndex++; 
       }
       else
       {             
-        decrypt(bufferDecr, bufferDecr_len, IVDecr, keyDecr, keyDecrsize);
-        fprintf(outputFile, "%s", bufferDecr);
-
+        
+        decrypt(bufferDecr, bufferDecr_len, IVDecr, keyDecr, keyDecrsize);        
+        fprintf(outputFile, "%s", bufferDecr);       
         bufIndex = 0;
         memset(bufferDecr, 0 , MAX_CHARACTER_SIZE);
         bufferDecr[bufIndex] = AESbuf;
