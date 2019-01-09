@@ -163,6 +163,7 @@ int main(int argc, char const *argv[])
     }   
      memset (buffer, 0, 8192);        
   }
+
   	/*
     //Step 2: Take the AES encoding and convert it back to digitalized signal
     //decryption algorithm
