@@ -72,7 +72,7 @@ void setHDRINCL(int s)
 int main(int argc, char const *argv[])
 {
 	  //check to see if all the argv is entred
-    if (argc != 2)
+    /*if (argc != 2)
     {
       printf("Usage: ./server <password> \n");
       return 0;
@@ -129,7 +129,7 @@ int main(int argc, char const *argv[])
     //check to see if the key is MAX_CHARACTER_SIZE charcter long
     char * keyEncr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
     strncpy(keyEncr, argv[1], MAX_CHARACTER_SIZE);	  
-	  int keyEncrsize = MAX_CHARACTER_SIZE; /* 256 bits */
+	  int keyEncrsize = MAX_CHARACTER_SIZE; // 256 bits 
 
     //initialize the buffer
 	  int bufferEncr_len = MAX_CHARACTER_SIZE;    
@@ -157,10 +157,10 @@ int main(int argc, char const *argv[])
 
     free(IVEncr);
     free(bufferEncr);
-    free(keyEncr);
+    free(keyEncr);*/
 
     //Step 3: TCP socket setting and sendign it  
-    int s = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);  /* open raw socket */
+    int s = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);  // open raw socket 
 
     struct sockaddr_in sin;
     sin.sin_family = AF_INET;
@@ -171,26 +171,29 @@ int main(int argc, char const *argv[])
     memset (datagram, 0, 4096);
 
     char * code;
-    char * data = calloc(0, MAX_CHARACTER_SIZE);    
+    char data  [32] = {"0"};  
+
+    code = "0xABCD";   
 
     FILE * textin;
-    textin = fopen("EncrFileOutput.txt","r");
+    textin = fopen("dummy.txt","r"); //EncrFileOutput.txt
 
-    int AESbuf = 0, bufIndex = 0, counter = 0;
+    int AESbuf = 0, bufIndex = 0, counter = 0;       
 
-    code = "0xABCD";    
+    int fdR = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);
+    char bufferR[8192]; 
 
     while(fscanf(textin, "%d" , &AESbuf) != EOF)
     {        
         if(bufIndex < MAX_CHARACTER_SIZE)
           {
+              //printf("%d AES: %d\n",bufIndex, AESbuf);
               data[bufIndex] = AESbuf;
-              bufIndex++;  
+              bufIndex++;              
           }
 
         else
-          {             
-              
+          {            
               setHDRINCL(s);               
 
               unsigned short int ip_len; 
@@ -202,17 +205,31 @@ int main(int argc, char const *argv[])
               }  
               else
               {
+                  printf("Waiting for reception signal\n");
+
+                  while (read (fdR, bufferR, 8192) > 0)
+                  {   
+                    if (strncmp( &bufferR[ sizeof(struct iphdr) + sizeof(struct tcphdr)],
+                      "0xABCR", strlen("0xABCR")) == 0)
+                    {
+                      break;
+                    }
+                                        
+                  }
+
                   printf ("send Packtet Num: %d \n", counter); 
                   counter++;                                          
               }
 
               bufIndex = 0;
               memset (datagram, 0, MAX_CHARACTER_SIZE);
-
+              memset (data, 0, MAX_CHARACTER_SIZE);              
+              
+              //printf("%d AES: %d\n",bufIndex, AESbuf);
               data[bufIndex] = AESbuf;
               bufIndex++; 
 
-              usleep(2);
+              usleep(2);             
 
             }         
       }
@@ -235,7 +252,6 @@ int main(int argc, char const *argv[])
         data[MAX_CHARACTER_SIZE -1]);                 
     }
 
-    free (data);
     fclose(textin);
 
     return 0;

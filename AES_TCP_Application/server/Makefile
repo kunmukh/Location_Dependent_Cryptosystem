@@ -10,4 +10,7 @@ server.o: server.c tcp_ip_packet.h
 		clang -Wall -c server.c
 
 clean:
-		rm -f *.o *~ server 
+		rm -f *.o *~ server EncrFileOutput.txt tempAud.txt 
+
+create:
+		touch EncrFileOutput.txt tempAud.txt 

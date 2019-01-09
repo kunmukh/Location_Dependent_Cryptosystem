@@ -20,22 +20,41 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+//header file that creates a new packet
+#include "tcp_ip_packet.h"
+
 //defining the max charc size
 #define MAX_CHARACTER_SIZE 32
+#define P 25 
 
 //displays as well as writes the encrypt file
-void printEncryptedTCPPacket(char* ciphertext, int len, FILE* encyptFile)
+void printEncryptedTCPPacket(char* ciphertext, int len, FILE* encyptFile, int choice)
 {
   int v;
-  for (v=0; v<len; v++)
-  {    
-    fprintf(encyptFile, "%d", ciphertext[v]);    
-    fprintf(encyptFile, "%s", " ");
-    //printf("%d ", ciphertext[v]);
-  }  
+  if (choice)
+  {
+  	for (v=0; v<len; v++)
+  	{    
+  	  fprintf(encyptFile, "%d", ciphertext[v]);    
+  	  fprintf(encyptFile, "%s", " ");
+  	  printf("%d ", ciphertext[v]);
+  	}  
+  	
+  	fprintf(encyptFile, "%s", "\n");
+  	printf("\n");
+  }
+  else
+  {
+  	for (v=0; v<len; v++)
+  	{    
+  	  fprintf(encyptFile, "%d", ciphertext[v]);    
+  	  fprintf(encyptFile, "%s", " ");  	  
+  	}  
+  	
+  	fprintf(encyptFile, "%s", "\n");
+  	
+  }
   
-  fprintf(encyptFile, "%s", "\n");
-  //printf("\n");
 }
 
 //decrypts the AES packets
@@ -56,9 +75,49 @@ int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
   return 0;
 }
 
+//send reception notification
+void setHDRINCL(int s)
+{
+    int one = 1;
+    const int *val = &one;
+    if (setsockopt (s, IPPROTO_IP, IP_HDRINCL, val, sizeof (one)) < 0)
+    {     
+      printf ("Warning: Cannot set HDRINCL!\n");
+    }
+}
+
+void sendReceptionNotif()
+{
+	//Step 3: TCP socket setting and sendign it  
+	int s = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);  // open raw socket 
+
+	struct sockaddr_in sin;
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons (P);
+	sin.sin_addr.s_addr = inet_addr ("127.0.0.1"); 
+	  
+	char datagram[4096];   
+	memset (datagram, 0, 4096);
+
+	char * code;
+	char data  [32] = {"0"};  
+
+	code = "0xABCR";
+
+	setHDRINCL(s);
+
+	unsigned short int ip_len; 
+	
+	char * newDatagram = createDatagram(datagram, P, code, data, sin, &ip_len);
+
+	printf("Ack Send.\n");
+	
+	sendto (s, newDatagram, ip_len, 0, (struct sockaddr *) &sin, sizeof (sin));
+}
+
 int main(int argc, char const *argv[])
 {
-	/*//Step 1: Setting Up socket  
+  //Step 1: Setting Up socket  
   int fd = socket (PF_INET, SOCK_RAW, IPPROTO_TCP);
 
   if (fd == -1)
@@ -68,7 +127,7 @@ int main(int argc, char const *argv[])
   }
 
   FILE * textOut;
-  textOut = fopen("EncrFileOutput.txt","w");
+  textOut = fopen("dummy.txt","w"); //EncrFileOutput.txt
 
   char buffer[8192]; 
 
@@ -82,8 +141,9 @@ int main(int argc, char const *argv[])
       printf("TCP Pack Received. Packet Number: %d\n", counter);
       printEncryptedTCPPacket(
         &buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCD")],
-        MAX_CHARACTER_SIZE, textOut);
-      counter++;      
+        MAX_CHARACTER_SIZE, textOut, 0);
+      counter++; 
+      sendReceptionNotif();
     }
 
     if (strncmp( &buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr)],
@@ -92,21 +152,21 @@ int main(int argc, char const *argv[])
       printf("TCP Pack Received.\n");
       printEncryptedTCPPacket(
         &buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCE")],
-         MAX_CHARACTER_SIZE, textOut);  
+         MAX_CHARACTER_SIZE, textOut, 1);  
           
       counter++;      
       printf("TCP Sequence Received. Counter: %d Last Charater: %c\n", counter,
         buffer[ sizeof(struct iphdr) + sizeof(struct tcphdr) + strlen("0xABCD") 
-          + MAX_CHARACTER_SIZE - 1]);
+          + MAX_CHARACTER_SIZE ]);
       fclose (textOut);
       break; 
     }   
      memset (buffer, 0, 8192);        
-  }*/
-
+  }
+  	/*
     //Step 2: Take the AES encoding and convert it back to digitalized signal
     //decryption algorithm
-    printf("Decryption Process Started\n");
+    printf("\nDecryption Process Started\n");
 
     //open the encrypted file to get the IV and the AES blocks 
     //open the output_digitalized text that would be created
@@ -114,7 +174,7 @@ int main(int argc, char const *argv[])
     encyptFileInput = fopen("EncrFileOutput.txt","r");
 
     FILE * outputFile;
-    outputFile = fopen("DecrOutput.txt","w");        
+    outputFile = fopen("DecrOutput.txt","w");  //write protected file      
 
     //initialize decrypt buffer
     int bufferDecr_len = MAX_CHARACTER_SIZE;
@@ -149,13 +209,13 @@ int main(int argc, char const *argv[])
       if(bufIndex < MAX_CHARACTER_SIZE)
       {
         bufferDecr[bufIndex] = AESbuf;
-        bufIndex++;  
+        bufIndex++; 
       }
       else
       {             
-        decrypt(bufferDecr, bufferDecr_len, IVDecr, keyDecr, keyDecrsize);
-        fprintf(outputFile, "%s", bufferDecr);
-
+        
+        decrypt(bufferDecr, bufferDecr_len, IVDecr, keyDecr, keyDecrsize);        
+        fprintf(outputFile, "%s", bufferDecr);       
         bufIndex = 0;
         memset(bufferDecr, 0 , MAX_CHARACTER_SIZE);
         bufferDecr[bufIndex] = AESbuf;
@@ -206,7 +266,7 @@ int main(int argc, char const *argv[])
     //play the resultent audio
     FILE * playResultAudio;
     playResultAudio = popen("ffplay -hide_banner -autoexit output.wav", "r");
-    pclose (playResultAudio);
+    pclose (playResultAudio);*/
 
     return 0;
 }

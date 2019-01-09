@@ -6,8 +6,11 @@
 client: client.o
 		clang -Wall -lmcrypt client.o -o client
 
-client.o: client.c
+client.o: client.c tcp_ip_packet.h
 		clang -Wall -c client.c
 
 clean:
-		rm -f *.o *~ client
+		rm -f *.o *~ client DecrOutput.txt  EncrFileOutput.txt output.wav
+
+create:
+		touch DecrOutput.txt  EncrFileOutput.txt output.wav
