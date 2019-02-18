@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
     int indexB = 0, dB = atoi(argv[3]);
     uint64_t anchorC[MAX_TIME_ANCHOR] = {'0'};
     int indexC = 0, dC = atoi(argv[4]);
-    int anchorChoice[3 * MAX_TIME_ANCHOR]  = {'0'};
+    int anchorChoice[MAX_TIME_ANCHOR]  = {'0'};
     int indexChoice = 0;
 
     srand(time(0));
@@ -72,24 +72,24 @@ int main(int argc, char const *argv[])
     	}
     }
 
-    printf("Anchor A: \n");
+    printf("\nAnchor A: \n");
     for (int i = 0; i < indexA; i++) 
     {
-        printf("%lu \n", anchorA[i]);
+        printf("Num %d %lu \n",i+1, anchorA[i]);
     }
     printf("\n");
 
     printf("Anchor B: \n");
     for (int i = 0; i < indexB; i++) 
     {
-        printf("%lu \n", anchorB[i]);
+        printf("Num %d %lu \n",i+1, anchorB[i]);
     }
     printf("\n");
 
     printf("Anchor C: \n");
     for (int i = 0; i < indexC; i++) 
     {
-        printf("%lu \n", anchorC[i]);
+        printf("Num %d %lu \n",i+1, anchorC[i]);
     }
     printf("\n");
 
