@@ -8,6 +8,7 @@
 #define MAX_TIME_ANCHOR 64
 #define C 300000000
 #define TICK 65536 * 975000
+#define OFFSET 0
 
 int main(int argc, char const *argv[])
 {
@@ -36,6 +37,7 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
         oTx[i] = obuf[i];
+        //printf("%d\n", oTx[i]);
     }
 
     uint64_t anchorA[MAX_TIME_ANCHOR] = {'0'};
@@ -53,19 +55,19 @@ int main(int argc, char const *argv[])
     {
     	if(rand() % 2 == 0)
     	{
-    		anchorA[indexA] = oTx[i] + 16440 + (dA * C * TICK ) + 16440 + (0.003 * C * TICK);
+    		anchorA[indexA] = oTx[i] + 16440 + (dA * C * TICK ) + 16440 + OFFSET;
     		indexA++;
     		anchorChoice[indexChoice] = 0;
     		indexChoice++;
     	}else if (rand() % 3 == 0)
     	{
-    		anchorB[indexB] = oTx[i] + 16440 + (dB * C * TICK)  + 16440 + (0.003 * C * TICK);
+    		anchorB[indexB] = oTx[i] + 16440 + (dB * C * TICK)  + 16440 + OFFSET;
     		indexB++;
     		anchorChoice[indexChoice] = 1;
     		indexChoice++;
     	}else
     	{
-    		anchorC[indexC] = oTx[i] + 16440 + (dC * C * TICK)  + 16440 + (0.003 * C * TICK);
+    		anchorC[indexC] = oTx[i] + 16440 + (dC * C * TICK)  + 16440 + OFFSET;
     		indexC++;
     		anchorChoice[indexChoice] = 2;
     		indexChoice++;
@@ -95,22 +97,30 @@ int main(int argc, char const *argv[])
 
     int anchorATransmit = 0, anchorBTransmit = 0, anchorCTransmit = 0; 
     printf("The Sequence of Transmission\n");
+
+    FILE * transmissionFile;
+    transmissionFile = fopen("transmission.dat","w");
+
      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
     	printf("Transmission %0d ", i );
+    	fprintf(transmissionFile, "%d ", anchorChoice[i]);
     	if (anchorChoice[i] == 0)
     	{
-    		printf("Anchor A: %lu \n", anchorA[anchorATransmit]);
+    		printf("Anchor A: %lu \n", anchorA[anchorATransmit]);    		
+    		fprintf(transmissionFile, "%lu\n", anchorA[anchorATransmit]);
     		anchorATransmit++;
     	}
     	if (anchorChoice[i] == 1)
     	{
     		printf("Anchor B: %lu \n", anchorB[anchorBTransmit]);
+    		fprintf(transmissionFile, "%lu\n", anchorB[anchorBTransmit]);
     		anchorBTransmit++;
     	}
     	if (anchorChoice[i] == 2)
     	{
     		printf("Anchor C: %lu \n", anchorC[anchorCTransmit]);
+    		fprintf(transmissionFile, "%lu\n", anchorC[anchorCTransmit]);
     		anchorCTransmit++;
     	}
     }
