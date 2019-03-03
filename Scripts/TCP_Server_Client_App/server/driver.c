@@ -84,12 +84,11 @@ int main(int argc, char const *argv[])
 
         memcpy(&packet[0], anchorNumberbuff, sizeof(anchorNumberbuff));
         memcpy(&packet[50], txBuff, sizeof(txBuff));
-        memcpy(&packet[100], offsetBuff, 
-            sizeof(offsetBuff));
+        memcpy(&packet[100], offsetBuff, sizeof(offsetBuff));
 
         printf("\n\nPacket Content: %s%s%s\n", &packet[0], &packet[50], &packet[100]);
 
-        send(new_socket , packet , 200 , 0 ); 
+        send(new_socket , packet , sizeof(packet) , 0 ); 
         printf("Message sent\n");      
 
         counter++;        
