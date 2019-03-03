@@ -53,13 +53,12 @@ int main(int argc, char const *argv[])
     } 
 
     valread = read( new_socket , buffer, 1024);     
-    printf("%s\n",buffer ); 
-    char * message = "I know you";
+    printf("%s\n",buffer );    
 
     int counter = 0;
 
-    char packet [100] = {0};
-    memset(packet, 0, sizeof(char) * 100);
+    char packet [200] = {0};
+    memset(packet, 0, sizeof(char) * 200);
     FILE * transmissionFile;
     transmissionFile = fopen(argv[1],"r");
 
@@ -72,7 +71,9 @@ int main(int argc, char const *argv[])
     char offsetBuff[21]= {0};
 
     while (read( new_socket , buffer, 1024) > 1)
-    {
+    {        
+        memset(packet, 0, sizeof(char) * 200);
+
         printf("%s\n",buffer );
 
         if (fscanf(transmissionFile, "%lu" , &anchorNumber) == EOF){break;}
@@ -82,21 +83,21 @@ int main(int argc, char const *argv[])
         sprintf(offsetBuff, "%" PRIu64, offset);        
 
         memcpy(&packet[0], anchorNumberbuff, sizeof(anchorNumberbuff));
-        memcpy(&packet[strlen(anchorNumberbuff)], txBuff, sizeof(txBuff));
-        memcpy(&packet[strlen(anchorNumberbuff) + strlen(txBuff)], offsetBuff, 
+        memcpy(&packet[50], txBuff, sizeof(txBuff));
+        memcpy(&packet[100], offsetBuff, 
             sizeof(offsetBuff));
 
-        printf("%s\n", packet);
+        printf("\n\nPacket Content: %s%s%s\n", &packet[0], &packet[50], &packet[100]);
 
-        send(new_socket , packet , strlen(packet) , 0 ); 
-        printf("Message sent\n\n");       
-        memset(packet, 0, sizeof(char) * 100);
+        send(new_socket , packet , 200 , 0 ); 
+        printf("Message sent\n");      
 
-        counter++;
-        if (counter > 100) {break;}
+        counter++;        
+
+        memset(buffer, 0, sizeof(char) * 1024);
     }
 
-    printf("%d\n", counter );
+    printf("\n\nNumber of Packet sent: %d\n", counter );
     
 
     return 0; 

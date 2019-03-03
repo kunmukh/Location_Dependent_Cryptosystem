@@ -76,17 +76,17 @@ int main(int argc, char const *argv[])
 
     while (read( sock , buffer, 1024) > 1)
     {
-        printf("\nPacket Content: %s\n", buffer);
+        printf("\n\nPacket Content: %s%s%s\n", &buffer[0], &buffer[50], &buffer[100]);
         
-        for(int i =0; i <1; i++)
+        for(int i = 0;  i <= 0 + 21; i++)
             {anchorNumberbuff[index] = buffer[i]; index++;}
         index = 0;        
-        for(int i =1; i <21; i++)
+        for(int i = 50; i <= 50 + 21; i++)
             {txBuff[index] = buffer[i]; index++;}
         index = 0;        
-        for (int i = 21; i < strlen(buffer); i++)
+        for (int i = 100; i <= 100 + 21; i++)
             {offsetBuff[index] = buffer[i]; index++;}
-        printf("\n");index = 0;        
+        index = 0;             
 
         anchorNumber =  S64(anchorNumberbuff);
         tx = S64(txBuff);
@@ -109,7 +109,7 @@ int main(int argc, char const *argv[])
         memset(offsetBuff, 0, sizeof(char) * 21);
     } 
     
-    printf("Number of Packet sent: %d\n", counter );
+    printf("\n\nNumber of Packet sent: %d\n", counter );
 
     return 0; 
 } 
