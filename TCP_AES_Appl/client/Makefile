@@ -10,4 +10,4 @@ client.o: client.c
 		clang -Wall -c client.c
 
 clean:
-		rm -f *.o *~ client DecrOutput.txt tempAud.txt EncrFileOutput.txt output.wav
+		rm -f *.o *~ client DecrOutput.txt tempAud.txt EncrFileOutput.txt output.wav receptionTx.dat key.txt

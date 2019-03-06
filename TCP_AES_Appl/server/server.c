@@ -76,7 +76,7 @@ int main(int argc, char const *argv[])
 
     txValueFromKey(argv[1], argv[2], argv[3], argv[4]);
 
-    //TCPServiceRoutine();
+    TCPServiceRoutine();
 
     return 0;
 }	
@@ -209,6 +209,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
     uint64_t anchorC[MAX_TIME_ANCHOR] = {'0'};
     int indexC = 0, dC = atoi(d3);
     int anchorChoice[MAX_TIME_ANCHOR]  = {'0'};
+    uint64_t anchorOffset[MAX_TIME_ANCHOR]  = {'0'};
     int indexChoice = 0;
 
     srand(time(0));
@@ -220,18 +221,21 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
         anchorA[indexA] = oTx[i] + 16440 + (dA * C * TICK ) + 16440 + OFFSET;
         indexA++;
         anchorChoice[indexChoice] = 0;
+        anchorOffset[indexChoice] = 0;
         indexChoice++;
       }else if (rand() % 3 == 0)
       {
         anchorB[indexB] = oTx[i] + 16440 + (dB * C * TICK)  + 16440 + OFFSET;
         indexB++;
         anchorChoice[indexChoice] = 1;
+        anchorOffset[indexChoice] = 0;
         indexChoice++;
       }else
       {
         anchorC[indexC] = oTx[i] + 16440 + (dC * C * TICK)  + 16440 + OFFSET;
         indexC++;
         anchorChoice[indexChoice] = 2;
+        anchorOffset[indexChoice] = 0;
         indexChoice++;
       }
     }
@@ -269,22 +273,24 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
       fprintf(transmissionFile, "%d ", anchorChoice[i]);
       if (anchorChoice[i] == 0)
       {
-        printf("Anchor A: %lu \n", anchorA[anchorATransmit]);       
-        fprintf(transmissionFile, "%lu\n", anchorA[anchorATransmit]);
+        printf("Anchor A: %lu ", anchorA[anchorATransmit]);       
+        fprintf(transmissionFile, "%lu ", anchorA[anchorATransmit]);
         anchorATransmit++;
       }
       if (anchorChoice[i] == 1)
       {
-        printf("Anchor B: %lu \n", anchorB[anchorBTransmit]);
-        fprintf(transmissionFile, "%lu\n", anchorB[anchorBTransmit]);
+        printf("Anchor B: %lu ", anchorB[anchorBTransmit]);
+        fprintf(transmissionFile, "%lu ", anchorB[anchorBTransmit]);
         anchorBTransmit++;
       }
       if (anchorChoice[i] == 2)
       {
-        printf("Anchor C: %lu \n", anchorC[anchorCTransmit]);
-        fprintf(transmissionFile, "%lu\n", anchorC[anchorCTransmit]);
+        printf("Anchor C: %lu ", anchorC[anchorCTransmit]);
+        fprintf(transmissionFile, "%lu ", anchorC[anchorCTransmit]);
         anchorCTransmit++;
       }
+      printf("Offset: %lu \n", anchorOffset[i]);
+      fprintf(transmissionFile, "%lu\n", anchorOffset[i]);
     }
 
     fclose(transmissionFile);
@@ -398,9 +404,10 @@ void TCPServiceRoutine()
 
         fscanf(txFile, "%lu" , &Tx);
         sprintf(txBuff, "%" PRIu64, Tx);
-      }  
 
-      sprintf(offsetBuff, "%" PRIu64, offset);        
+        fscanf(txFile, "%lu" , &offset);
+        sprintf(offsetBuff, "%" PRIu64, offset);
+      }               
 
       memcpy(&packet[0], anchorNumberbuff, sizeof(anchorNumberbuff));
       memcpy(&packet[50], txBuff, sizeof(txBuff));

@@ -15,6 +15,15 @@
 #include <openssl/sha.h>
 #include <time.h>
 
+//header file for TCP
+#include <sys/socket.h> 
+#include <netinet/in.h> 
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <inttypes.h>
+
+#define PORT 8080 
+
 //defining the max charc size
 #define MAX_CHARACTER_SIZE 32
 #define MAX_TIME_ANCHOR 64
@@ -31,7 +40,9 @@ int decrypt(
     int key_len 
 );
 
-void  aesToAudioConversion(char const * pass);
+int tcpServiceRoutine();
+
+void aesToAudioConversion(char const * pass);
 
 void keyFromTxValue(char const * d1, char const * d2, char const * d3);
 
@@ -41,6 +52,8 @@ void printEncryptedFile(char* ciphertext,
                         FILE* encyptFile);
 
 void playSong ();
+
+int64_t S64(const char *s);
 
 int main(int argc, char const *argv[])
 {
@@ -53,7 +66,8 @@ int main(int argc, char const *argv[])
    
     printf("\n==Location-Dependent Algorithm==\n");
 
-    //tcp
+    tcpServiceRoutine();
+
     keyFromTxValue(argv[1], argv[2], argv[3]);
 
     //*******
@@ -76,6 +90,123 @@ int main(int argc, char const *argv[])
     free(password);
     return 0;
 }	
+
+int tcpServiceRoutine()
+{
+    int sock = 0; 
+    struct sockaddr_in serv_addr; 
+    char *hello = "Hello from client"; 
+    char buffer[1024] = {0}; 
+
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    { 
+        printf("\n Socket creation error \n"); 
+        return -1; 
+    } 
+
+    memset(&serv_addr, '0', sizeof(serv_addr)); 
+
+    serv_addr.sin_family = AF_INET; 
+    serv_addr.sin_port = htons(PORT); 
+    
+    // Convert IPv4 and IPv6 addresses from text to binary form 
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0) 
+    { 
+        printf("\nInvalid address/ Address not supported \n"); 
+        return -1; 
+    } 
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    { 
+        printf("\nConnection Failed \n"); 
+        return -1; 
+    } 
+
+    send(sock , hello , strlen(hello) , 0 );
+    printf("Ready to receive\n");
+
+    char * received = "Packet acknowledgement received";
+
+    send(sock , received , strlen(received) , 0 ); 
+    int counter = 0;
+
+    uint64_t anchorNumber = 0;
+    uint64_t tx = 0;
+    uint64_t offset = 0;    
+
+    char txBuff[21]= {0};
+    char anchorNumberbuff[21]= {0};
+    char offsetBuff[21]= {0};
+    char dataBuff[32]= {0};
+
+    int index = 0;
+
+    FILE * receptionFile;
+    receptionFile = fopen("receptionTx.dat","w");
+
+    FILE * encrFile;
+    encrFile = fopen("EncrFileOutput.txt","w");
+
+    int first = 0;
+
+    while (read( sock , buffer, 1024) > 1)
+    {
+        printf("\n\nPacket Content: AcNum:%s Tx:%s Offset:%s", &buffer[0], &buffer[50], 
+        &buffer[100]);
+        printf(" Data: ");     
+        for(int i = 0; i < MAX_CHARACTER_SIZE; i++){printf("%d ", buffer[150+i]);}
+        printf("\n");
+        
+        for(int i = 0;  i <= 0 + 21; i++)
+            {anchorNumberbuff[index] = buffer[i]; index++;}
+        index = 0;        
+        for(int i = 50; i <= 50 + 21; i++)
+            {txBuff[index] = buffer[i]; index++;}
+        index = 0;        
+        for (int i = 100; i <= 100 + 21; i++)
+            {offsetBuff[index] = buffer[i]; index++;}
+        index = 0;
+        for (int i = 150; i <= 150 + 32; i++)
+            {dataBuff[index] = buffer[i]; index++;}
+        index = 0;             
+
+        anchorNumber =  S64(anchorNumberbuff);
+        tx = S64(txBuff);
+        offset = S64(offsetBuff);        
+
+        printf("Anchor Number: %lu\n", anchorNumber);
+        printf("Tx: %lu\n", tx);
+        printf("Offset %lu\n", offset);
+
+        if (first < 32)
+        {
+          fprintf(receptionFile, "%lu ", anchorNumber);
+          fprintf(receptionFile, "%lu ",tx);
+          fprintf(receptionFile, "%lu\n",offset);
+
+          first++;
+        }
+
+        for(int i = 0; i < MAX_CHARACTER_SIZE; i++)
+          {fprintf(encrFile, "%d ", buffer[150+i]);}        
+        fprintf(encrFile, "%s", "\n");
+
+        send(sock , received , strlen(received) , 0 ); 
+
+        counter++;
+
+        memset(buffer, 0, sizeof(char) * 1024);
+        memset(txBuff, 0, sizeof(char) * 21);
+        memset(anchorNumberbuff, 0, sizeof(char) * 21);
+        memset(offsetBuff, 0, sizeof(char) * 21);
+    } 
+    
+    printf("\n\nNumber of Packet sent: %d\n", counter );
+
+    fclose(receptionFile);
+    fclose(encrFile);
+    return 0;
+}
 
 int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
 {
@@ -127,7 +258,9 @@ void keyFromTxValue(char const * d1, char const * d2, char const * d3)
           {
               receptionTime[receptionTimeindex] = Tx - 16440 - (dC * C * TICK)  - 16440 - STDDIV;
           }        
-          receptionTimeindex++;
+          receptionTimeindex++; 
+          //empty scan
+          fscanf(receptionFile, "%ld" , &Tx);        
       }
 
       printf("The Key Is: \n");
@@ -239,6 +372,20 @@ void aesToAudioConversion(char const * password)
   free(IVDecr); 
 
   pclose(outputAudiofile); 
+}
+
+int64_t S64(const char *s) 
+{
+  int64_t i;
+  char c ;
+  int scanned = sscanf(s, "%"  PRIu64 "%c", &i, &c);
+  if (scanned == 1) return i;
+  if (scanned > 1) {
+    // TBD about extra data found
+    return i;
+    }
+  // TBD failed to scan;  
+  return 0;  
 }
 
 void playSong(void)
