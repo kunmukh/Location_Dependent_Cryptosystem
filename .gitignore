@@ -1,8 +1,10 @@
 *
 !/**/
 !*.*
+!Makefile
 *.wav
 *.dat
 *.txt
 *.o
+*.zip
 

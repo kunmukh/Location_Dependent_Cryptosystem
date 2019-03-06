@@ -76,9 +76,9 @@ int main(int argc, char const *argv[])
 
     while (read( sock , buffer, 1024) > 1)
     {
-        printf("\n\nPacket Content: %s%s%s\n", &buffer[0], &buffer[50], &buffer[100]);
+        printf("\n\nPacket Content: %s %s %s %s\n", &buffer[0], &buffer[50], &buffer[100], &buffer[150]);
         
-        for(int i = 0;  i <= 0 + 21; i++)
+        /*for(int i = 0;  i <= 0 + 21; i++)
             {anchorNumberbuff[index] = buffer[i]; index++;}
         index = 0;        
         for(int i = 50; i <= 50 + 21; i++)
@@ -97,7 +97,7 @@ int main(int argc, char const *argv[])
         printf("Offset %lu\n", offset);
 
         fprintf(receptionFile, "%lu ", anchorNumber);
-        fprintf(receptionFile, "%lu\n",tx);
+        fprintf(receptionFile, "%lu\n",tx);*/
 
         send(sock , received , strlen(received) , 0 ); 
 
