@@ -63,11 +63,20 @@ int main(int argc, char const *argv[])
       return 0;
     }  
 
-    audioToAESConversion(argv[1]);
+    //*****
+    unsigned char *obuf = SHA256(argv[1], strlen(argv[1]), 0);
+    char * password = calloc(1, SHA256_DIGEST_LENGTH);   
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+      password[i] = obuf[i];            
+    } 
+    //*****
+
+    audioToAESConversion(password);
 
     txValueFromKey(argv[1], argv[2], argv[3], argv[4]);
 
-    TCPServiceRoutine();
+    //TCPServiceRoutine();
 
     return 0;
 }	
@@ -129,7 +138,8 @@ void audioToAESConversion(char const * pass)
     fread(IVEncr, 1, mcrypt_enc_get_iv_size(td), fp);
     fclose(fp);
     mcrypt_generic_end(td);   
-    //place the IV in the encrypted file    
+    //place the IV in the encrypted file 
+    printEncryptedFile(IVEncr , mcrypt_enc_get_iv_size(td) , encyptFileOutput);  
 
     //check to see if the key is MAX_CHARACTER_SIZE charcter long
     char * keyEncr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
@@ -144,7 +154,7 @@ void audioToAESConversion(char const * pass)
     printf("The IV is: %s\n", IVEncr);
     printf("The Key is: %s\n\n", keyEncr);        
 
-    while(fread(bufferEncr, 4, 1, inputAudiofile)) // read one 2-byte sample
+    while(fread(bufferEncr, 4, 1, inputAudiofile)) // read one 4-byte sample
     {   
       encrypt(bufferEncr, bufferEncr_len, IVEncr, keyEncr, keyEncrsize);            
       printEncryptedFile(bufferEncr , bufferEncr_len , encyptFileOutput);       
@@ -166,7 +176,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
 
     //input buffer
     char * ibuf = calloc(1, MAX_CHARACTER_SIZE);  
-    strncpy(ibuf, key, MAX_CHARACTER_SIZE);
+    strncpy(ibuf, key, MAX_CHARACTER_SIZE); 
 
     printf("Password: %s\n", ibuf);
     //output buffer
