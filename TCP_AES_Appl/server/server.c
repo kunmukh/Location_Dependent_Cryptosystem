@@ -25,10 +25,8 @@
 
 //defining the max charc size
 #define MAX_CHARACTER_SIZE 32
-#define MAX_TIME_ANCHOR 64
+#define MAX_TIME_ANCHOR 32
 #define C 300000000
-#define TICK 65536 * 975000
-#define OFFSET 0
 
 //the encrypt function
 int encrypt(
@@ -172,27 +170,21 @@ void audioToAESConversion(char const * pass)
 //the function that creates the Tx values
 void txValueFromKey(char const * key,char const * d1, char const * d2, char const * d3)
 {
-    printf("\n Tx Value Creation starts \n");
+    printf("\nTx Value Creation starts \n");
 
     //input buffer
     char * ibuf = calloc(1, MAX_CHARACTER_SIZE);  
-    strncpy(ibuf, key, MAX_CHARACTER_SIZE); 
+    strncpy(ibuf, key, MAX_CHARACTER_SIZE);
 
-    printf("Password: %s\n", ibuf);
-    //output buffer
+    printf("\nPassword: %s\n", ibuf);
+     //output buffer
     unsigned char *obuf = SHA256(ibuf, strlen(ibuf), 0);
     
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
         printf("%02x", obuf[i]);
     }
-    printf("\n");    
-
-    //Tx = 16440 + ((d * c * TICK) + 16440 + (NOISE / c) * TICK
-    //TICK = 65536 tick / sec * 975000
-    //NOISE = 0.003 m
-    //d = 10 m
-    //c = 300000000 m / sec
+    printf("\n\n");
 
     //create the Tx array
     int oTx [MAX_CHARACTER_SIZE] = {'0'};
@@ -201,96 +193,71 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
         oTx[i] = obuf[i];
         //printf("%d\n", oTx[i]);
     }
-
-    uint64_t anchorA[MAX_TIME_ANCHOR] = {'0'};
-    int indexA = 0, dA = atoi(d1);
-    uint64_t anchorB[MAX_TIME_ANCHOR] = {'0'};
-    int indexB = 0, dB = atoi(d2);
-    uint64_t anchorC[MAX_TIME_ANCHOR] = {'0'};
-    int indexC = 0, dC = atoi(d3);
-    int anchorChoice[MAX_TIME_ANCHOR]  = {'0'};
-    uint64_t anchorOffset[MAX_TIME_ANCHOR]  = {'0'};
-    int indexChoice = 0;
+    
+    int dA = atoi(d1);    
+    int dB = atoi(d2);    
+    int dC = atoi(d3);
 
     srand(time(0));
 
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-      if(rand() % 2 == 0)
-      {
-        anchorA[indexA] = oTx[i] + 16440 + (dA * C * TICK ) + 16440 + OFFSET;
-        indexA++;
-        anchorChoice[indexChoice] = 0;
-        anchorOffset[indexChoice] = 0;
-        indexChoice++;
-      }else if (rand() % 3 == 0)
-      {
-        anchorB[indexB] = oTx[i] + 16440 + (dB * C * TICK)  + 16440 + OFFSET;
-        indexB++;
-        anchorChoice[indexChoice] = 1;
-        anchorOffset[indexChoice] = 0;
-        indexChoice++;
-      }else
-      {
-        anchorC[indexC] = oTx[i] + 16440 + (dC * C * TICK)  + 16440 + OFFSET;
-        indexC++;
-        anchorChoice[indexChoice] = 2;
-        anchorOffset[indexChoice] = 0;
-        indexChoice++;
-      }
-    }
+    //Timing Variables
+    uint64_t Tnet = 97500 * 65536;
+    uint64_t TstartOffset = 0.005 * 975000 * 65536; //time for all the net pakt to go 5ms
+                             //319488000 (NT ticks)
+    uint64_t TbtwnOffset = 0.0025 * 975000 * 65536; //time between each of my seg
+                             //159744000 (NT ticks)
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
+                             //210 NT ticks
+    uint64_t TdistA = (dA/C) * 975000 * 65536 ;
+    uint64_t TdistB = (dB/C) * 975000 * 65536;
+    uint64_t TdistC = (dC/C) * 975000 * 65536;
 
-    printf("\nAnchor A: \n");
-    for (int i = 0; i < indexA; i++) 
-    {
-        printf("Num %d %lu \n",i+1, anchorA[i]);
-    }
-    printf("\n");
+    uint64_t Tdistlast = 0;
+    uint64_t Ttxlast = 0;
 
-    printf("Anchor B: \n");
-    for (int i = 0; i < indexB; i++) 
-    {
-        printf("Num %d %lu \n",i+1, anchorB[i]);
-    }
-    printf("\n");
+    uint64_t Tx = 0;
+    uint64_t Txfirst = 0;
 
-    printf("Anchor C: \n");
-    for (int i = 0; i < indexC; i++) 
-    {
-        printf("Num %d %lu \n",i+1, anchorC[i]);
-    }
-    printf("\n");
+    //first transmission being sent    
 
-    int anchorATransmit = 0, anchorBTransmit = 0, anchorCTransmit = 0; 
+    int Slot = 0; 
     printf("The Sequence of Transmission\n");
 
     FILE * transmissionFile;
     transmissionFile = fopen("transmission.dat","w");
 
+    //first transmission
+    Txfirst = Tnet + TstartOffset;
+    fprintf(transmissionFile, "%lu\n", Txfirst);
+
      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-      printf("Transmission %0d ", i );
-      fprintf(transmissionFile, "%d ", anchorChoice[i]);
-      if (anchorChoice[i] == 0)
-      {
-        printf("Anchor A: %lu ", anchorA[anchorATransmit]);       
-        fprintf(transmissionFile, "%lu ", anchorA[anchorATransmit]);
-        anchorATransmit++;
+    {         
+      Slot = oTx[i];
+      if (rand() % 2 == 0)
+      {       
+        Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + (Slot + 0.5) * Tslot; 
+        Tdistlast = TdistA;
+        printf("AES: %02x Slot: %d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
+        fprintf(transmissionFile, "%d ", 0);        
+        
       }
-      if (anchorChoice[i] == 1)
+      else if (rand() % 3 == 0)
       {
-        printf("Anchor B: %lu ", anchorB[anchorBTransmit]);
-        fprintf(transmissionFile, "%lu ", anchorB[anchorBTransmit]);
-        anchorBTransmit++;
+        Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + (Slot + 0.5) * Tslot;
+        Tdistlast = TdistB; 
+        printf("AES: %02x Slot: %d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
+        fprintf(transmissionFile, "%d ", 1); 
       }
-      if (anchorChoice[i] == 2)
+      else 
       {
-        printf("Anchor C: %lu ", anchorC[anchorCTransmit]);
-        fprintf(transmissionFile, "%lu ", anchorC[anchorCTransmit]);
-        anchorCTransmit++;
+        Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + (Slot + 0.5) * Tslot; 
+        Tdistlast = TdistC;
+        printf("AES: %02x Slot: %d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
+        fprintf(transmissionFile, "%d ", 2); 
       }
-      printf("Offset: %lu \n", anchorOffset[i]);
-      fprintf(transmissionFile, "%lu\n", anchorOffset[i]);
+            
+      fprintf(transmissionFile, "%lu\n",Tx);
+      Ttxlast = Tx;     
     }
 
     fclose(transmissionFile);
@@ -350,7 +317,7 @@ void TCPServiceRoutine()
 
   int counter = 0;
 
-  char packet [250] = {0};
+  char packet [1000] = {0};
   memset(packet, 0, sizeof(char) * 250);
   FILE * txFile;
   txFile = fopen("transmission.dat","r");
@@ -358,24 +325,24 @@ void TCPServiceRoutine()
   dataFile = fopen("EncrFileOutput.txt","r");
 
   uint64_t anchorNumber = 0;
-  uint64_t Tx = 0;
-  uint64_t offset = OFFSET;
+  uint64_t Tx = 0, Txstart = 0;  
   int data = 0;
 
   char txBuff[21]= {0};
   char anchorNumberbuff[21]= {0};
-  char offsetBuff[21]= {0};
-  char dataBuff[32]={0};
-
+  
+  char dataBuff[900]={0};
   int breakflag = 0;
+
+  fscanf(txFile, "%lu" , &Txstart);
 
   while (read( new_socket , buffer, 1024) > 1)
   {        
-      memset(packet, 0, sizeof(char) * 250);
+      memset(packet, 0, sizeof(char) * 1000);
 
       printf("%s\n",buffer);
 
-      for (int i = 0; i < MAX_CHARACTER_SIZE; i++)
+      for (int i = 0; i < 900; i++)
       {
         if(fscanf(dataFile, "%d", &data) != EOF)
         {          
@@ -387,8 +354,7 @@ void TCPServiceRoutine()
           break;
         }       
         
-      }           
-
+      }
       if (breakflag == 1)
       {
         break;
@@ -397,29 +363,24 @@ void TCPServiceRoutine()
       if (fscanf(txFile, "%lu" , &anchorNumber) == EOF)
       {
         fseek(txFile, 0, SEEK_SET);
+        fscanf(txFile, "%lu" , &Txstart);
       }
       else
       {
         sprintf(anchorNumberbuff, "%" PRIu64, anchorNumber);
 
         fscanf(txFile, "%lu" , &Tx);
-        sprintf(txBuff, "%" PRIu64, Tx);
-
-        fscanf(txFile, "%lu" , &offset);
-        sprintf(offsetBuff, "%" PRIu64, offset);
+        sprintf(txBuff, "%" PRIu64, Tx);        
       }               
 
       memcpy(&packet[0], anchorNumberbuff, sizeof(anchorNumberbuff));
-      memcpy(&packet[50], txBuff, sizeof(txBuff));
-      memcpy(&packet[100], offsetBuff, sizeof(offsetBuff));
-      memcpy(&packet[150], dataBuff, sizeof(dataBuff));     
+      memcpy(&packet[50], txBuff, sizeof(txBuff));      
+      memcpy(&packet[100], dataBuff, sizeof(dataBuff));     
 
-      printf("\n\nPacket Content: AcNum:%s Tx:%s Offset:%s", &packet[0], &packet[50], 
-        &packet[100]);
+      printf("\n\nPacket Content: AcNum:%s Tx:%s", &packet[0], &packet[50]);
         printf(" Data: ");     
-      for(int i = 0; i < MAX_CHARACTER_SIZE; i++){printf("%d ", packet[150+i]);}
-        printf("\n");
-      
+      for(int i = 0; i < 900; i++){printf("%d ", packet[100+i]);}
+        printf("\n");      
 
       send(new_socket , packet , sizeof(packet) , 0 ); 
       printf("Message sent\n");      

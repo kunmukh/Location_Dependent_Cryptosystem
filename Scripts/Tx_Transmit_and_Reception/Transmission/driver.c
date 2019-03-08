@@ -83,14 +83,14 @@ int main(int argc, char const *argv[])
     	{
     		Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + (Slot + 0.5) * Tslot;
     		Tdistlast = TdistB; 
-    		printf("Slot: %d Anchor A: %lu \n", oTx[i], Tx);
+    		printf("Slot: %d Anchor B: %lu \n", oTx[i], Tx);
     		fprintf(transmissionFile, "%d ", 1); 
     	}
     	else 
     	{
     		Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + (Slot + 0.5) * Tslot; 
     		Tdistlast = TdistC;
-    		printf("Slot: %d Anchor A: %lu \n", oTx[i], Tx);
+    		printf("Slot: %d Anchor C: %lu \n", oTx[i], Tx);
     		fprintf(transmissionFile, "%d ", 2); 
     	}
     	  		

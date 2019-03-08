@@ -26,10 +26,9 @@
 
 //defining the max charc size
 #define MAX_CHARACTER_SIZE 32
-#define MAX_TIME_ANCHOR 64
+#define MAX_TIME_ANCHOR 32
 #define C 300000000
-#define TICK 65536 * 975000
-#define STDDIV 0
+
 
 //the decrypt function
 int decrypt(
@@ -44,7 +43,7 @@ int tcpServiceRoutine();
 
 void aesToAudioConversion(char const * pass);
 
-void keyFromTxValue(char const * d1, char const * d2, char const * d3);
+void keyFromTxValue();
 
 //cipher text displyer
 void printEncryptedFile(char* ciphertext, 
@@ -58,9 +57,9 @@ int64_t S64(const char *s);
 int main(int argc, char const *argv[])
 {
 	  //check to see if all the argv is entred
-    if (argc != 4)
+    if (argc != 1)
     {
-      printf("Usage: ./client <d1> <d2> <d3>\n");
+      printf("Usage: ./client\n");
       return 0;
     }
    
@@ -68,7 +67,7 @@ int main(int argc, char const *argv[])
 
     tcpServiceRoutine();
 
-    keyFromTxValue(argv[1], argv[2], argv[3]);
+    keyFromTxValue();
 
     //*******
     char * password = calloc(1, SHA256_DIGEST_LENGTH);
@@ -131,13 +130,11 @@ int tcpServiceRoutine()
     int counter = 0;
 
     uint64_t anchorNumber = 0;
-    uint64_t tx = 0;
-    uint64_t offset = 0;    
+    uint64_t tx = 0;      
 
     char txBuff[21]= {0};
-    char anchorNumberbuff[21]= {0};
-    char offsetBuff[21]= {0};
-    char dataBuff[32]= {0};
+    char anchorNumberbuff[21]= {0};    
+    char dataBuff[900]= {0};
 
     int index = 0;
 
@@ -151,44 +148,39 @@ int tcpServiceRoutine()
 
     while (read( sock , buffer, 1024) > 1)
     {
-        printf("\n\nPacket Content: AcNum:%s Tx:%s Offset:%s", &buffer[0], &buffer[50], 
-        &buffer[100]);
+        printf("\n\nPacket Content: AcNum:%s Tx:%s", &buffer[0], &buffer[50]);
         printf(" Data: ");     
-        for(int i = 0; i < MAX_CHARACTER_SIZE; i++){printf("%d ", buffer[150+i]);}
+        for(int i = 0; i < 900; i++){printf("%d ", buffer[100+i]);}
         printf("\n");
         
-        for(int i = 0;  i <= 0 + 21; i++)
+        index = 0;
+        for(int i = 0;  i < 0 + 22; i++)
             {anchorNumberbuff[index] = buffer[i]; index++;}
         index = 0;        
-        for(int i = 50; i <= 50 + 21; i++)
+        for(int i = 50; i < 50 + 22; i++)
             {txBuff[index] = buffer[i]; index++;}
-        index = 0;        
-        for (int i = 100; i <= 100 + 21; i++)
-            {offsetBuff[index] = buffer[i]; index++;}
         index = 0;
-        for (int i = 150; i <= 150 + 32; i++)
-            {dataBuff[index] = buffer[i]; index++;}
-        index = 0;             
 
+        for (int i = 100; i < 100 + 900; i++)
+            {dataBuff[index] = buffer[i]; index++;}
+        index = 0;
+        
         anchorNumber =  S64(anchorNumberbuff);
-        tx = S64(txBuff);
-        offset = S64(offsetBuff);        
+        tx = S64(txBuff);               
 
         printf("Anchor Number: %lu\n", anchorNumber);
-        printf("Tx: %lu\n", tx);
-        printf("Offset %lu\n", offset);
+        printf("Tx: %lu\n", tx);        
 
         if (first < 32)
         {
           fprintf(receptionFile, "%lu ", anchorNumber);
-          fprintf(receptionFile, "%lu ",tx);
-          fprintf(receptionFile, "%lu\n",offset);
+          fprintf(receptionFile, "%lu\n",tx);          
 
           first++;
         }
 
-        for(int i = 0; i < MAX_CHARACTER_SIZE; i++)
-          {fprintf(encrFile, "%d ", buffer[150+i]);}        
+        for(int i = 0; i < 900; i++)
+          {fprintf(encrFile, "%d ", buffer[100+i]);}        
         fprintf(encrFile, "%s", "\n");
 
         send(sock , received , strlen(received) , 0 ); 
@@ -197,8 +189,7 @@ int tcpServiceRoutine()
 
         memset(buffer, 0, sizeof(char) * 1024);
         memset(txBuff, 0, sizeof(char) * 21);
-        memset(anchorNumberbuff, 0, sizeof(char) * 21);
-        memset(offsetBuff, 0, sizeof(char) * 21);
+        memset(anchorNumberbuff, 0, sizeof(char) * 21);        
     } 
     
     printf("\n\nNumber of Packet sent: %d\n", counter );
@@ -225,73 +216,61 @@ int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
   return 0;
 }
 
-void keyFromTxValue(char const * d1, char const * d2, char const * d3)
+void keyFromTxValue()
 {
-      printf("\nThe Key extraction Process Started\n");
+    printf("\nThe Key extraction Process Started\n");
 
-      FILE * receptionFile;
-      receptionFile = fopen("receptionTx.dat","r");
+    FILE * transmissionFile;
+    transmissionFile = fopen("receptionTx.dat","r");
 
-      int anchorNumber = 0;
-      int receptionTime[MAX_TIME_ANCHOR] = {'0'};
-      uint64_t Tx = 0;
-      int receptionTimeindex = 0;
+    int anchorNumber = 0;
+    int receptionTime[MAX_TIME_ANCHOR] = {'0'};
+    uint64_t Trx = 0;
+    int receptionTimeindex = 0;    
 
-      int dA = atoi(d1);
-      int dB = atoi(d2);
-      int dC = atoi(d3);
+    uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
+    uint64_t Trxlast = 0;
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
+                                                   //210 NT ticks
 
-      while(fscanf(receptionFile, "%d" , &anchorNumber) != EOF)
-      {
-          fscanf(receptionFile, "%lu" , &Tx);
-          //printf("%d %lu \n",anchorNumber, Tx );
+    while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
+    {
+        fscanf(transmissionFile, "%lu" , &Trx);        
+        
+        receptionTime[receptionTimeindex] = (Trx - Trxlast - TbtwnOffset) / Tslot;
+        Trxlast = Trx;        
+        receptionTimeindex++;
+    }
 
-          if (anchorNumber == 0)
-          {
-              receptionTime[receptionTimeindex] = Tx - 16440 - (dA * C * TICK)  - 16440 - STDDIV;
-          }
-          else if (anchorNumber == 1)
-          {
-              receptionTime[receptionTimeindex] = Tx - 16440 - (dB * C * TICK)  - 16440 - STDDIV;
-          }
-          else if (anchorNumber == 2)
-          {
-              receptionTime[receptionTimeindex] = Tx - 16440 - (dC * C * TICK)  - 16440 - STDDIV;
-          }        
-          receptionTimeindex++; 
-          //empty scan
-          fscanf(receptionFile, "%ld" , &Tx);        
-      }
+    printf("The Key Is: \n");
+    unsigned char * oBuf = calloc(1, MAX_CHARACTER_SIZE); 
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        oBuf[i] = receptionTime[i];
+    }
 
-      printf("The Key Is: \n");
-      unsigned char * oBuf = calloc(1, MAX_CHARACTER_SIZE); 
-      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-      {        
-          oBuf[i] = receptionTime[i];
-      }
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+        printf("%02x", oBuf[i]);
+    }
+    printf("\n");
 
-      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-      {
-          printf("%02x", oBuf[i]);
-      }
-      printf("\n");
+    FILE * keyFile;
+    keyFile = fopen("key.txt","w");
+    char * password = calloc(1, SHA256_DIGEST_LENGTH);   
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+      password[i] = oBuf[i];;
+    }   
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+        fprintf(keyFile, "%c", password[i]);          
+    }
+    fprintf(keyFile, "%s","\n");
+    fclose(transmissionFile);
+    fclose(keyFile);
 
-      FILE * keyFile;
-      keyFile = fopen("key.txt","w");
-      char * password = calloc(1, SHA256_DIGEST_LENGTH);   
-      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-      {
-        password[i] = oBuf[i];;
-      }   
-      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-      {
-          fprintf(keyFile, "%c", password[i]);          
-      }
-      fprintf(keyFile, "%s","\n");
-      fclose(receptionFile);
-      fclose(keyFile);
-
-      printf("\nThe Key extraction Process Ended\n");
+    printf("\nThe Key extraction Process Ended\n");               
 }
 
 void aesToAudioConversion(char const * password)
