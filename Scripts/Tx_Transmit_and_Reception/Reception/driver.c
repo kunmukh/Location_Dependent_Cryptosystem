@@ -5,10 +5,9 @@
 #include <time.h>
 
 #define MAX_CHARACTER_SIZE 32
-#define MAX_TIME_ANCHOR 64
+#define MAX_TIME_ANCHOR 32
 #define C 300000000
-#define TICK 65536 * 975000
-#define STDDIV 0
+
 
 
 int main(int argc, char const *argv[])
@@ -18,30 +17,20 @@ int main(int argc, char const *argv[])
 
     int anchorNumber = 0;
     int receptionTime[MAX_TIME_ANCHOR] = {'0'};
-    uint64_t Tx = 0;
-    int receptionTimeindex = 0;
+    uint64_t Trx = 0;
+    int receptionTimeindex = 0;    
 
-    int dA = atoi(argv[2]);
-    int dB = atoi(argv[3]);
-    int dC = atoi(argv[4]);
+    uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
+    uint64_t Trxlast = 0;
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
+                                                   //210 NT ticks    
 
     while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
     {
-        fscanf(transmissionFile, "%lu" , &Tx);
-        //printf("%d %lu \n",anchorNumber, Tx );
-
-        if (anchorNumber == 0)
-        {
-            receptionTime[receptionTimeindex] = Tx - 16440 - (dA * C * TICK)  - 16440 - STDDIV;
-        }
-        else if (anchorNumber == 1)
-        {
-            receptionTime[receptionTimeindex] = Tx - 16440 - (dB * C * TICK)  - 16440 - STDDIV;
-        }
-        else if (anchorNumber == 2)
-        {
-            receptionTime[receptionTimeindex] = Tx - 16440 - (dC * C * TICK)  - 16440 - STDDIV;
-        }        
+        fscanf(transmissionFile, "%lu" , &Trx);        
+        
+        receptionTime[receptionTimeindex] = (Trx - Trxlast - TbtwnOffset) / Tslot;
+        Trxlast = Trx;        
         receptionTimeindex++;
     }
 

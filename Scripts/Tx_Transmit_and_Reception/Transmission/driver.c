@@ -5,10 +5,8 @@
 #include <time.h>
 
 #define MAX_CHARACTER_SIZE 32
-#define MAX_TIME_ANCHOR 64
+#define MAX_TIME_ANCHOR 32
 #define C 300000000
-#define TICK 65536 * 975000
-#define OFFSET 0
 
 int main(int argc, char const *argv[])
 {
@@ -24,13 +22,7 @@ int main(int argc, char const *argv[])
     {
         printf("%02x", obuf[i]);
     }
-    printf("\n");    
-
-    //Tx = 16440 + ((d * c * TICK) + 16440 + (NOISE / c) * TICK
-    //TICK = 65536 tick / sec * 975000
-    //NOISE = 0.003 m
-    //d = 10 m
-    //c = 300000000 m / sec
+    printf("\n");
 
     //create the Tx array
     int oTx [MAX_CHARACTER_SIZE] = {'0'};
@@ -39,90 +31,71 @@ int main(int argc, char const *argv[])
         oTx[i] = obuf[i];
         //printf("%d\n", oTx[i]);
     }
-
-    uint64_t anchorA[MAX_TIME_ANCHOR] = {'0'};
-    int indexA = 0, dA = atoi(argv[2]);
-    uint64_t anchorB[MAX_TIME_ANCHOR] = {'0'};
-    int indexB = 0, dB = atoi(argv[3]);
-    uint64_t anchorC[MAX_TIME_ANCHOR] = {'0'};
-    int indexC = 0, dC = atoi(argv[4]);
-    int anchorChoice[MAX_TIME_ANCHOR]  = {'0'};
-    int indexChoice = 0;
+    
+    int dA = atoi(argv[2]);    
+    int dB = atoi(argv[3]);    
+    int dC = atoi(argv[4]);
 
     srand(time(0));
 
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-    	if(rand() % 2 == 0)
-    	{
-    		anchorA[indexA] = oTx[i] + 16440 + (dA * C * TICK ) + 16440 + OFFSET;
-    		indexA++;
-    		anchorChoice[indexChoice] = 0;
-    		indexChoice++;
-    	}else if (rand() % 3 == 0)
-    	{
-    		anchorB[indexB] = oTx[i] + 16440 + (dB * C * TICK)  + 16440 + OFFSET;
-    		indexB++;
-    		anchorChoice[indexChoice] = 1;
-    		indexChoice++;
-    	}else
-    	{
-    		anchorC[indexC] = oTx[i] + 16440 + (dC * C * TICK)  + 16440 + OFFSET;
-    		indexC++;
-    		anchorChoice[indexChoice] = 2;
-    		indexChoice++;
-    	}
-    }
+    //Timing Variables
+    uint64_t Tnet = 97500 * 65536;
+    uint64_t TstartOffset = 0.005 * 975000 * 65536; //time for all the net pakt to go 5ms
+    											   //319488000 (NT ticks)
+    uint64_t TbtwnOffset = 0.0025 * 975000 * 65536; //time between each of my seg
+    											   //159744000 (NT ticks)
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
+    											   //210 NT ticks
+    uint64_t TdistA = (dA/C) * 975000 * 65536 ;
+    uint64_t TdistB = (dB/C) * 975000 * 65536;
+    uint64_t TdistC = (dC/C) * 975000 * 65536;
 
-    printf("\nAnchor A: \n");
-    for (int i = 0; i < indexA; i++) 
-    {
-        printf("Num %d %lu \n",i+1, anchorA[i]);
-    }
-    printf("\n");
+    uint64_t Tdistlast = 0;
+    uint64_t Ttxlast = 0;
 
-    printf("Anchor B: \n");
-    for (int i = 0; i < indexB; i++) 
-    {
-        printf("Num %d %lu \n",i+1, anchorB[i]);
-    }
-    printf("\n");
+    uint64_t Tx = 0;
+    uint64_t Txfirst = 0;
 
-    printf("Anchor C: \n");
-    for (int i = 0; i < indexC; i++) 
-    {
-        printf("Num %d %lu \n",i+1, anchorC[i]);
-    }
-    printf("\n");
+    //first transmission being sent    
 
-    int anchorATransmit = 0, anchorBTransmit = 0, anchorCTransmit = 0; 
+    int Slot = 0; 
     printf("The Sequence of Transmission\n");
 
     FILE * transmissionFile;
     transmissionFile = fopen("transmission.dat","w");
 
+    //first transmission
+    Txfirst = Tnet + TstartOffset;
+    printf("%lu\n", Txfirst);
+
      for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-    	printf("Transmission %0d ", i );
-    	fprintf(transmissionFile, "%d ", anchorChoice[i]);
-    	if (anchorChoice[i] == 0)
-    	{
-    		printf("Anchor A: %lu \n", anchorA[anchorATransmit]);    		
-    		fprintf(transmissionFile, "%lu\n", anchorA[anchorATransmit]);
-    		anchorATransmit++;
+    {    	   	
+    	Slot = oTx[i];
+    	if (rand() % 2 == 0)
+    	{    		
+    		Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + (Slot + 0.5) * Tslot; 
+    		Tdistlast = TdistA;
+    		printf("Slot: %d Anchor A: %lu \n", oTx[i], Tx);
+    		fprintf(transmissionFile, "%d ", 0);     		
+    		
     	}
-    	if (anchorChoice[i] == 1)
+    	else if (rand() % 3 == 0)
     	{
-    		printf("Anchor B: %lu \n", anchorB[anchorBTransmit]);
-    		fprintf(transmissionFile, "%lu\n", anchorB[anchorBTransmit]);
-    		anchorBTransmit++;
+    		Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + (Slot + 0.5) * Tslot;
+    		Tdistlast = TdistB; 
+    		printf("Slot: %d Anchor A: %lu \n", oTx[i], Tx);
+    		fprintf(transmissionFile, "%d ", 1); 
     	}
-    	if (anchorChoice[i] == 2)
+    	else 
     	{
-    		printf("Anchor C: %lu \n", anchorC[anchorCTransmit]);
-    		fprintf(transmissionFile, "%lu\n", anchorC[anchorCTransmit]);
-    		anchorCTransmit++;
+    		Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + (Slot + 0.5) * Tslot; 
+    		Tdistlast = TdistC;
+    		printf("Slot: %d Anchor A: %lu \n", oTx[i], Tx);
+    		fprintf(transmissionFile, "%d ", 2); 
     	}
+    	  		
+    	fprintf(transmissionFile, "%lu\n",Tx);
+    	Ttxlast = Tx;    	
     }
 
 	return 0;    
