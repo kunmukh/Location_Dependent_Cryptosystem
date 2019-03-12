@@ -148,10 +148,10 @@ int tcpServiceRoutine()
 
     while (read( sock , buffer, 1024) > 1)
     {
-        printf("\n\nPacket Content: AcNum:%s Tx:%s", &buffer[0], &buffer[50]);
-        printf(" Data: ");     
+        printf("\n\nPacket Content: AcNum:%s Tx:%s\n", &buffer[0], &buffer[50]);
+        /*printf(" Data: ");     
         for(int i = 0; i < 900; i++){printf("%d ", buffer[100+i]);}
-        printf("\n");
+        printf("\n");*/
         
         index = 0;
         for(int i = 0;  i < 0 + 22; i++)
@@ -230,14 +230,28 @@ void keyFromTxValue()
 
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
     uint64_t Trxlast = 0;
-    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
+    uint64_t TslotMain = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
                                                    //210 NT ticks
+    uint64_t Tnoise = 0;
+    srand(time(0));
+    int range = 91; //0 - range
 
     while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
     {
         fscanf(transmissionFile, "%lu" , &Trx);        
         
-        receptionTime[receptionTimeindex] = (Trx - Trxlast - TbtwnOffset) / Tslot;
+        //NOISE
+        if (rand() % 2 == 0)
+        {
+          Tnoise = +1 * rand() % range; 
+        }
+        else
+        {
+          Tnoise = -1 * rand() % range;
+        }
+        
+        receptionTime[receptionTimeindex] = 
+                        (Trx - Trxlast - TbtwnOffset + Tnoise) / TslotMain;
         Trxlast = Trx;        
         receptionTimeindex++;
     }

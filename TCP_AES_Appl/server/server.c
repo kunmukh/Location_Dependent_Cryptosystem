@@ -66,8 +66,10 @@ int main(int argc, char const *argv[])
     char * password = calloc(1, SHA256_DIGEST_LENGTH);   
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
-      password[i] = obuf[i];            
+      password[i] = obuf[i];
+      printf("%02x", obuf[i]);               
     } 
+    printf("\n");
     //*****
 
     audioToAESConversion(password);
@@ -230,38 +232,65 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
     Txfirst = Tnet + TstartOffset;
     fprintf(transmissionFile, "%lu\n", Txfirst);
 
-     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    FILE * dataFile;
+    dataFile = fopen("EncrFileOutput.txt","r");
+    int i = 0, breakflag = 0, data = 0, numPak = 0;
+
+    while(1)    
     {         
-      Slot = oTx[i];
-      if (rand() % 2 == 0)
-      {       
-        Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + (Slot + 0.5) * Tslot; 
-        Tdistlast = TdistA;
-        printf("AES: %02x Slot: %d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
-        fprintf(transmissionFile, "%d ", 0);        
-        
-      }
-      else if (rand() % 3 == 0)
+      for (int j = 0; j < 900; j++)
       {
-        Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + (Slot + 0.5) * Tslot;
-        Tdistlast = TdistB; 
-        printf("AES: %02x Slot: %d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
-        fprintf(transmissionFile, "%d ", 1); 
+        if (fscanf(dataFile, "%d", &data) != EOF)
+        {}
+        else
+        {
+          breakflag = 1;
+          break;
+        }
       }
-      else 
+      if(breakflag){break;}
+
+      if (i < 32)
       {
-        Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + (Slot + 0.5) * Tslot; 
-        Tdistlast = TdistC;
-        printf("AES: %02x Slot: %d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
-        fprintf(transmissionFile, "%d ", 2); 
+        Slot = oTx[i];
+        if (rand() % 2 == 0)
+        {       
+          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + (Slot + 0.5) * Tslot; 
+          Tdistlast = TdistA;
+          printf("AES: %02x Slot: %d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
+          fprintf(transmissionFile, "%d ", 0);        
+          
+        }
+        else if (rand() % 3 == 0)
+        {
+          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + (Slot + 0.5) * Tslot;
+          Tdistlast = TdistB; 
+          printf("AES: %02x Slot: %d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
+          fprintf(transmissionFile, "%d ", 1); 
+        }
+        else 
+        {
+          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + (Slot + 0.5) * Tslot; 
+          Tdistlast = TdistC;
+          printf("AES: %02x Slot: %d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
+          fprintf(transmissionFile, "%d ", 2); 
+        }
+              
+        fprintf(transmissionFile, "%lu\n",Tx);
+        Ttxlast = Tx;
+        i++;
+        numPak++;
       }
-            
-      fprintf(transmissionFile, "%lu\n",Tx);
-      Ttxlast = Tx;     
+      else
+      {
+        i = 0;
+      }
+           
     }
 
+    printf("Num Pak:%d\n",numPak);
     fclose(transmissionFile);
-
+    fclose(dataFile);
     printf("\nTx value have been created\n");
 }
 
@@ -354,33 +383,22 @@ void TCPServiceRoutine()
           break;
         }       
         
-      }
-      if (breakflag == 1)
-      {
-        break;
-      }
+      }      
 
-      if (fscanf(txFile, "%lu" , &anchorNumber) == EOF)
-      {
-        fseek(txFile, 0, SEEK_SET);
-        fscanf(txFile, "%lu" , &Txstart);
-      }
-      else
-      {
-        sprintf(anchorNumberbuff, "%" PRIu64, anchorNumber);
-
-        fscanf(txFile, "%lu" , &Tx);
-        sprintf(txBuff, "%" PRIu64, Tx);        
-      }               
+      fscanf(txFile, "%lu" , &anchorNumber);      
+      sprintf(anchorNumberbuff, "%" PRIu64, anchorNumber);
+      fscanf(txFile, "%lu" , &Tx);
+      sprintf(txBuff, "%" PRIu64, Tx);        
 
       memcpy(&packet[0], anchorNumberbuff, sizeof(anchorNumberbuff));
       memcpy(&packet[50], txBuff, sizeof(txBuff));      
       memcpy(&packet[100], dataBuff, sizeof(dataBuff));     
 
-      printf("\n\nPacket Content: AcNum:%s Tx:%s", &packet[0], &packet[50]);
-        printf(" Data: ");     
+      printf("\n\nPacket Content: AcNum:%s Tx:%s Packet:%d\n", &packet[0], 
+        &packet[50], counter);
+      /*printf(" Data: ");     
       for(int i = 0; i < 900; i++){printf("%d ", packet[100+i]);}
-        printf("\n");      
+      printf("\n");*/
 
       send(new_socket , packet , sizeof(packet) , 0 ); 
       printf("Message sent\n");      
@@ -388,6 +406,11 @@ void TCPServiceRoutine()
       counter++;        
 
       memset(buffer, 0, sizeof(char) * 1024);
+
+      if (breakflag == 1)
+      {
+        break;
+      }
   }
 
   printf("\n\nNumber of Packet sent: %d\n", counter );
