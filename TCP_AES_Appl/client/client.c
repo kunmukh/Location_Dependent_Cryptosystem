@@ -28,6 +28,7 @@
 #define MAX_CHARACTER_SIZE 32
 #define MAX_TIME_ANCHOR 32
 #define C 300000000
+#define PACKET_LENGTH 900
 
 
 //the decrypt function
@@ -43,7 +44,7 @@ int tcpServiceRoutine();
 
 void aesToAudioConversion(char const * pass);
 
-void keyFromTxValue();
+void keyFromTxValue(char * password);
 
 //cipher text displyer
 void printEncryptedFile(char* ciphertext, 
@@ -62,23 +63,14 @@ int main(int argc, char const *argv[])
       printf("Usage: ./client\n");
       return 0;
     }
+    //local variable password storage
+    char * password = calloc(1, SHA256_DIGEST_LENGTH);
    
     printf("\n==Location-Dependent Algorithm==\n");
 
-    tcpServiceRoutine();
+    tcpServiceRoutine();        
 
-    keyFromTxValue();
-
-    //*******
-    char * password = calloc(1, SHA256_DIGEST_LENGTH);
-    FILE * keyFile;
-    keyFile = fopen("key.txt","r");   
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-      fscanf(keyFile, "%c", &password[i]);      
-    }    
-    fclose(keyFile);    
-    ///*****
+    keyFromTxValue(password);    
 
     aesToAudioConversion(password);
    
@@ -134,7 +126,7 @@ int tcpServiceRoutine()
 
     char txBuff[21]= {0};
     char anchorNumberbuff[21]= {0};    
-    char dataBuff[900]= {0};
+    char dataBuff[PACKET_LENGTH]= {0};
 
     int index = 0;
 
@@ -142,15 +134,14 @@ int tcpServiceRoutine()
     receptionFile = fopen("receptionTx.dat","w");
 
     FILE * encrFile;
-    encrFile = fopen("EncrFileOutput.txt","w");
-
-    int first = 0;
+    encrFile = fopen("EncrFileOutput.txt","w");    
 
     while (read( sock , buffer, 1024) > 1)
     {
-        printf("\n\nPacket Content: AcNum:%s Tx:%s\n", &buffer[0], &buffer[50]);
+        printf("\n\nPacket Content: AcNum:%s Tx:%s Packet:%d\n", 
+          &buffer[0], &buffer[50], counter);
         /*printf(" Data: ");     
-        for(int i = 0; i < 900; i++){printf("%d ", buffer[100+i]);}
+        for(int i = 0; i < PACKET_LENGTH; i++){printf("%d ", buffer[100+i]);}
         printf("\n");*/
         
         index = 0;
@@ -161,7 +152,7 @@ int tcpServiceRoutine()
             {txBuff[index] = buffer[i]; index++;}
         index = 0;
 
-        for (int i = 100; i < 100 + 900; i++)
+        for (int i = 100; i < 100 + PACKET_LENGTH; i++)
             {dataBuff[index] = buffer[i]; index++;}
         index = 0;
         
@@ -171,15 +162,12 @@ int tcpServiceRoutine()
         printf("Anchor Number: %lu\n", anchorNumber);
         printf("Tx: %lu\n", tx);        
 
-        if (first < 32)
-        {
-          fprintf(receptionFile, "%lu ", anchorNumber);
-          fprintf(receptionFile, "%lu\n",tx);          
+        
+        fprintf(receptionFile, "%lu ", anchorNumber);
+        fprintf(receptionFile, "%lu\n",tx);          
 
-          first++;
-        }
 
-        for(int i = 0; i < 900; i++)
+        for(int i = 0; i < PACKET_LENGTH; i++)
           {fprintf(encrFile, "%d ", buffer[100+i]);}        
         fprintf(encrFile, "%s", "\n");
 
@@ -189,7 +177,8 @@ int tcpServiceRoutine()
 
         memset(buffer, 0, sizeof(char) * 1024);
         memset(txBuff, 0, sizeof(char) * 21);
-        memset(anchorNumberbuff, 0, sizeof(char) * 21);        
+        memset(anchorNumberbuff, 0, sizeof(char) * 21);
+        memset(dataBuff,0, sizeof(char) * PACKET_LENGTH);        
     } 
     
     printf("\n\nNumber of Packet sent: %d\n", counter );
@@ -199,24 +188,7 @@ int tcpServiceRoutine()
     return 0;
 }
 
-int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
-{
-  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
-  int blocksize = mcrypt_enc_get_block_size(td);
-  if( buffer_len % blocksize != 0 )
-    {
-      return 1;
-    }
-  
-  mcrypt_generic_init(td, key, key_len, IV);
-  mdecrypt_generic(td, buffer, buffer_len);
-  mcrypt_generic_deinit (td);
-  mcrypt_module_close(td);
-  
-  return 0;
-}
-
-void keyFromTxValue()
+void keyFromTxValue(char * password)
 {
     printf("\nThe Key extraction Process Started\n");
 
@@ -230,31 +202,38 @@ void keyFromTxValue()
 
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
     uint64_t Trxlast = 0;
-    uint64_t TslotMain = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
                                                    //210 NT ticks
     uint64_t Tnoise = 0;
     srand(time(0));
-    int range = 91; //0 - range
+    int margin = 10;   
+
+    FILE * debugFile;
+    debugFile = fopen("Debug.txt","w");
+    int bufferNum = 0;
 
     while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
-    {
+    {        
         fscanf(transmissionFile, "%lu" , &Trx);        
         
-        //NOISE
-        if (rand() % 2 == 0)
-        {
-          Tnoise = +1 * rand() % range; 
-        }
-        else
-        {
-          Tnoise = -1 * rand() % range;
-        }
+        Tnoise = 0;//(rand() % ((Tslot + 1) - margin * 2)) - ((Tslot/2) + margin);         
         
-        receptionTime[receptionTimeindex] = 
-                        (Trx - Trxlast - TbtwnOffset + Tnoise) / TslotMain;
-        Trxlast = Trx;        
+        if(bufferNum < 32)
+        {
+          receptionTime[receptionTimeindex] = 
+                        (Trx - Trxlast - TbtwnOffset + Tnoise) / Tslot; 
+        }
+
+        fprintf(debugFile, "%d ", anchorNumber); 
+        fprintf(debugFile, "%lu ", ((Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot));       
+        fprintf(debugFile, "%lu ", (Trx + Tnoise));
+        fprintf(debugFile, "%d %d\n ",PACKET_LENGTH * bufferNum, 
+            (PACKET_LENGTH * bufferNum) + PACKET_LENGTH);
+
+        Trxlast = Trx + Tnoise;
         receptionTimeindex++;
-    }
+        bufferNum++;
+    }    
 
     printf("The Key Is: \n");
     unsigned char * oBuf = calloc(1, MAX_CHARACTER_SIZE); 
@@ -267,23 +246,15 @@ void keyFromTxValue()
     {
         printf("%02x", oBuf[i]);
     }
-    printf("\n");
-
-    FILE * keyFile;
-    keyFile = fopen("key.txt","w");
-    char * password = calloc(1, SHA256_DIGEST_LENGTH);   
+    printf("\n");    
+       
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
       password[i] = oBuf[i];;
     }   
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-        fprintf(keyFile, "%c", password[i]);          
-    }
-    fprintf(keyFile, "%s","\n");
-    fclose(transmissionFile);
-    fclose(keyFile);
-
+    
+    fclose(transmissionFile);    
+    fclose(debugFile);
     printf("\nThe Key extraction Process Ended\n");               
 }
 
@@ -365,6 +336,23 @@ void aesToAudioConversion(char const * password)
   free(IVDecr); 
 
   pclose(outputAudiofile); 
+}
+
+int decrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
+{
+  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
+  int blocksize = mcrypt_enc_get_block_size(td);
+  if( buffer_len % blocksize != 0 )
+    {
+      return 1;
+    }
+  
+  mcrypt_generic_init(td, key, key_len, IV);
+  mdecrypt_generic(td, buffer, buffer_len);
+  mcrypt_generic_deinit (td);
+  mcrypt_module_close(td);
+  
+  return 0;
 }
 
 int64_t S64(const char *s) 

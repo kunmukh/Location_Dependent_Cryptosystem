@@ -27,6 +27,7 @@
 #define MAX_CHARACTER_SIZE 32
 #define MAX_TIME_ANCHOR 32
 #define C 300000000
+#define PACKET_LENGTH 900
 
 //the encrypt function
 int encrypt(
@@ -46,10 +47,14 @@ void printEncryptedFile(char* ciphertext,
 void audioToAESConversion(char const * pass);
 
 //create the Tx values
-void txValueFromKey(char const * key, char const * d1, char const * d2, char const * d3);
+void txValueFromKey(char const * key, char const * d1, 
+                    char const * d2, char const * d3);
 
 //sends the TCP value
 void TCPServiceRoutine();
+
+//Creates Password from AES
+void passwordCreation(char const * key, char * pass);
 
 
 int main(int argc, char const *argv[])
@@ -61,60 +66,19 @@ int main(int argc, char const *argv[])
       return 0;
     }  
 
-    //*****
-    unsigned char *obuf = SHA256(argv[1], strlen(argv[1]), 0);
-    char * password = calloc(1, SHA256_DIGEST_LENGTH);   
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-      password[i] = obuf[i];
-      printf("%02x", obuf[i]);               
-    } 
-    printf("\n");
-    //*****
-
-    audioToAESConversion(password);
+    audioToAESConversion(argv[1]);
 
     txValueFromKey(argv[1], argv[2], argv[3], argv[4]);
 
     TCPServiceRoutine();
-
+    
     return 0;
 }	
 
-int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
-{
-  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
-  int blocksize = mcrypt_enc_get_block_size(td);
-  if( buffer_len % blocksize != 0 )
-    {
-      return 1;
-    }
-
-  mcrypt_generic_init(td, key, key_len, IV);
-  mcrypt_generic(td, buffer, buffer_len);
-  mcrypt_generic_deinit (td);
-  mcrypt_module_close(td);
-  
-  return 0;
-}
-
-//displays as well as writes the encrypt file
-void printEncryptedFile(char* ciphertext, int len, FILE* encyptFile)
-{
-  int v;
-  for (v=0; v<len; v++)
-  {    
-    fprintf(encyptFile, "%d", ciphertext[v]);
-    fprintf(encyptFile, "%s", " ");
-  }  
-  
-  fprintf(encyptFile, "%s", "\n");
-}
-
 //the function that creates the AUDIO->AES
-void audioToAESConversion(char const * pass)
+void audioToAESConversion(char const * key)
 {
-    //Step 1: Take Audio file -> Encypt the signal
+   //Step 1: Take Audio file -> Encypt the signal
     printf("\n==Location-Dependent Algorithm==\n");
     printf("\nEncryption Process Started\n");
 
@@ -139,7 +103,19 @@ void audioToAESConversion(char const * pass)
     fclose(fp);
     mcrypt_generic_end(td);   
     //place the IV in the encrypted file 
-    printEncryptedFile(IVEncr , mcrypt_enc_get_iv_size(td) , encyptFileOutput);  
+    printEncryptedFile(IVEncr , mcrypt_enc_get_iv_size(td) , encyptFileOutput); 
+
+    //Generate the password
+    unsigned char *obuf = SHA256(key, strlen(key), 0);
+    char * pass = calloc(1, SHA256_DIGEST_LENGTH);
+    
+    printf("AES-258: %s : ", key);   
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+      pass[i] = obuf[i];
+      printf("%02x", obuf[i]);               
+    } 
+    printf("\n"); 
 
     //check to see if the key is MAX_CHARACTER_SIZE charcter long
     char * keyEncr = calloc(1, MAX_CHARACTER_SIZE); //MAX_CHARACTER_SIZE * 8 = 128    
@@ -236,62 +212,93 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
     dataFile = fopen("EncrFileOutput.txt","r");
     int i = 0, breakflag = 0, data = 0, numPak = 0;
 
+    FILE * debugFile;
+    debugFile = fopen("Debug.txt","w");    
+
+    int bufferNumOld = 0, bufferNum = 0;
+
     while(1)    
     {         
-      for (int j = 0; j < 900; j++)
+      bufferNumOld = bufferNum;
+
+      for (int j = 0; j < PACKET_LENGTH; j++)
       {
         if (fscanf(dataFile, "%d", &data) != EOF)
-        {}
+        {
+          bufferNum++;
+        }
         else
         {
           breakflag = 1;
           break;
         }
-      }
-      if(breakflag){break;}
+      }      
 
       if (i < 32)
       {
         Slot = oTx[i];
+        
         if (rand() % 2 == 0)
         {       
-          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + (Slot + 0.5) * Tslot; 
+          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + ((Slot + 0.5) * Tslot); 
           Tdistlast = TdistA;
           printf("AES: %02x Slot: %d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
-          fprintf(transmissionFile, "%d ", 0);        
-          
+          fprintf(transmissionFile, "%d ", 0); 
+
+          fprintf(debugFile, "%d ", 0);
+          fprintf(debugFile, "%d ", Slot);
+          fprintf(debugFile, "%d ", (int)(TdistA + ((Slot + 0.5) * Tslot)));
         }
         else if (rand() % 3 == 0)
         {
-          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + (Slot + 0.5) * Tslot;
+          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + ((Slot + 0.5) * Tslot);
           Tdistlast = TdistB; 
           printf("AES: %02x Slot: %d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 1); 
+
+          fprintf(debugFile, "%d ", 1);
+          fprintf(debugFile, "%d ", Slot);
+          fprintf(debugFile, "%d ", (int)(TdistB + ((Slot + 0.5) * Tslot)));
         }
         else 
         {
-          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + (Slot + 0.5) * Tslot; 
+          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + ((Slot + 0.5) * Tslot); 
           Tdistlast = TdistC;
           printf("AES: %02x Slot: %d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 2); 
+
+          fprintf(debugFile, "%d ", 2); 
+          fprintf(debugFile, "%d ", Slot);
+          fprintf(debugFile, "%d ", (int)(TdistC + ((Slot + 0.5) * Tslot)));         
         }
               
         fprintf(transmissionFile, "%lu\n",Tx);
+
+        fprintf(debugFile, " %d %d\n",bufferNumOld, bufferNum);        
+
         Ttxlast = Tx;
         i++;
         numPak++;
-      }
-      else
+
+        if(i == 32)
+        {
+          i = 0;
+        }
+      }      
+
+      if(breakflag)
       {
-        i = 0;
+        break;
       }
            
     }
 
+
     printf("Num Pak:%d\n",numPak);
     fclose(transmissionFile);
     fclose(dataFile);
-    printf("\nTx value have been created\n");
+    fclose(debugFile);
+    printf("\nTx value have been created\n");    
 }
 
 //the function sends the TCP packets
@@ -346,8 +353,8 @@ void TCPServiceRoutine()
 
   int counter = 0;
 
-  char packet [1000] = {0};
-  memset(packet, 0, sizeof(char) * 250);
+  char packet [1024] = {0};
+  memset(packet, 0, sizeof(char) * 1024);
   FILE * txFile;
   txFile = fopen("transmission.dat","r");
   FILE * dataFile;
@@ -360,7 +367,7 @@ void TCPServiceRoutine()
   char txBuff[21]= {0};
   char anchorNumberbuff[21]= {0};
   
-  char dataBuff[900]={0};
+  char dataBuff[PACKET_LENGTH]={0};
   int breakflag = 0;
 
   fscanf(txFile, "%lu" , &Txstart);
@@ -371,22 +378,23 @@ void TCPServiceRoutine()
 
       printf("%s\n",buffer);
 
-      for (int i = 0; i < 900; i++)
+      for (int i = 0; i < PACKET_LENGTH; i++)
       {
         if(fscanf(dataFile, "%d", &data) != EOF)
         {          
-          dataBuff[i] = data;
+          dataBuff[i] = data;                 
         }
         else
         {
           breakflag = 1;
           break;
-        }       
+        }  
         
       }      
 
       fscanf(txFile, "%lu" , &anchorNumber);      
       sprintf(anchorNumberbuff, "%" PRIu64, anchorNumber);
+
       fscanf(txFile, "%lu" , &Tx);
       sprintf(txBuff, "%" PRIu64, Tx);        
 
@@ -394,10 +402,10 @@ void TCPServiceRoutine()
       memcpy(&packet[50], txBuff, sizeof(txBuff));      
       memcpy(&packet[100], dataBuff, sizeof(dataBuff));     
 
-      printf("\n\nPacket Content: AcNum:%s Tx:%s Packet:%d\n", &packet[0], 
+      printf("\n\nPacket Content: AcNum:%s Tx:%s Counter:%d\n", &packet[0], 
         &packet[50], counter);
       /*printf(" Data: ");     
-      for(int i = 0; i < 900; i++){printf("%d ", packet[100+i]);}
+      for(int i = 0; i < PACKET_LENGTH; i++){printf("%d ", packet[100+i]);}
       printf("\n");*/
 
       send(new_socket , packet , sizeof(packet) , 0 ); 
@@ -406,6 +414,10 @@ void TCPServiceRoutine()
       counter++;        
 
       memset(buffer, 0, sizeof(char) * 1024);
+      memset(packet, 0, sizeof(char) * 1024);
+      memset(anchorNumberbuff, 0, sizeof(char) * 21);
+      memset(txBuff, 0, sizeof(char) * 21);
+      memset(dataBuff, 0, sizeof(char) * PACKET_LENGTH);
 
       if (breakflag == 1)
       {
@@ -417,4 +429,34 @@ void TCPServiceRoutine()
 
   fclose(txFile);
   fclose(dataFile);
+}
+
+int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
+{
+  MCRYPT td = mcrypt_module_open("rijndael-256", NULL, "cbc", NULL);
+  int blocksize = mcrypt_enc_get_block_size(td);
+  if( buffer_len % blocksize != 0 )
+    {
+      return 1;
+    }
+
+  mcrypt_generic_init(td, key, key_len, IV);
+  mcrypt_generic(td, buffer, buffer_len);
+  mcrypt_generic_deinit (td);
+  mcrypt_module_close(td);
+  
+  return 0;
+}
+
+//displays as well as writes the encrypt file
+void printEncryptedFile(char* ciphertext, int len, FILE* encyptFile)
+{
+  int v;
+  for (v=0; v<len; v++)
+  {    
+    fprintf(encyptFile, "%d", ciphertext[v]);
+    fprintf(encyptFile, "%s", " ");
+  }  
+  
+  fprintf(encyptFile, "%s", "\n");
 }
