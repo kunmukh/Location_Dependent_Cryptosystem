@@ -10,9 +10,12 @@
 #include <string.h>
 #include <math.h>
 #include <mcrypt.h> //http://linux.die.net/man/3/mcrypt
+//sudo apt-get install libmcrypt-dev
+//sudo apt-get install ffmpeg
 
 //header for Tx values
-#include <openssl/sha.h>
+//sudo apt-get install libssl-dev
+#include <openssl/sha.h> 
 #include <time.h>
 
 //header for TCP tranfer
@@ -21,7 +24,7 @@
 #include <netinet/in.h>  
 #include <inttypes.h>
 
-#define PORT 8080 
+#define PORT 8896 
 
 //defining the max charc size
 #define MAX_CHARACTER_SIZE 32
@@ -83,6 +86,8 @@ void audioToAESConversion(char const * key)
     printf("\nEncryption Process Started\n");
 
     //open the respective audio and audio_text input files
+    //ffmpeg -i pc.mp3 input.wav
+    //ffmpeg -ss 2 -to 10 -i input.wav output.wav
     FILE * inputAudiofile;   
     inputAudiofile  = popen("ffmpeg -i input.wav -hide_banner -f s16le -ac 1 -", "r");    
     
@@ -245,9 +250,9 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
           printf("AES: %02x Slot: %d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 0); 
 
-          fprintf(debugFile, "%d ", 0);
-          fprintf(debugFile, "%d ", Slot);
-          fprintf(debugFile, "%d ", (int)(TdistA + ((Slot + 0.5) * Tslot)));
+          fprintf(debugFile, "Ach#: %d ", 0);
+          fprintf(debugFile, "Slot: %d ", Slot);
+          fprintf(debugFile, "Tslot+d: %d ", (int)(TdistA + ((Slot + 0.5) * Tslot)));
         }
         else if (rand() % 3 == 0)
         {
@@ -256,9 +261,9 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
           printf("AES: %02x Slot: %d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 1); 
 
-          fprintf(debugFile, "%d ", 1);
-          fprintf(debugFile, "%d ", Slot);
-          fprintf(debugFile, "%d ", (int)(TdistB + ((Slot + 0.5) * Tslot)));
+          fprintf(debugFile, "Ach#: %d ", 1);
+          fprintf(debugFile, "Slot: %d ", Slot);
+          fprintf(debugFile, "Tslot+d: %d ", (int)(TdistB + ((Slot + 0.5) * Tslot)));
         }
         else 
         {
@@ -267,14 +272,14 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
           printf("AES: %02x Slot: %d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 2); 
 
-          fprintf(debugFile, "%d ", 2); 
-          fprintf(debugFile, "%d ", Slot);
-          fprintf(debugFile, "%d ", (int)(TdistC + ((Slot + 0.5) * Tslot)));         
+          fprintf(debugFile, "Ach#: %d ", 2);
+          fprintf(debugFile, "Slot: %d ", Slot);
+          fprintf(debugFile, "Tslot+d: %d ", (int)(TdistC + ((Slot + 0.5) * Tslot)));         
         }
               
         fprintf(transmissionFile, "%lu\n",Tx);
 
-        fprintf(debugFile, " %d %d\n",bufferNumOld, bufferNum);        
+        fprintf(debugFile, "1stB: %d LastB: %d\n",bufferNumOld, bufferNum);        
 
         Ttxlast = Tx;
         i++;

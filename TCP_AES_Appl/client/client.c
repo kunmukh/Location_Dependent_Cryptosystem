@@ -22,7 +22,7 @@
 #include <arpa/inet.h>
 #include <inttypes.h>
 
-#define PORT 8080 
+#define PORT 8896 
 
 //defining the max charc size
 #define MAX_CHARACTER_SIZE 32
@@ -224,10 +224,13 @@ void keyFromTxValue(char * password)
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
 
-        fprintf(debugFile, "%d ", anchorNumber); 
-        fprintf(debugFile, "%lu ", ((Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot));       
-        fprintf(debugFile, "%lu ", (Trx + Tnoise));
-        fprintf(debugFile, "%d %d\n ",PACKET_LENGTH * bufferNum, 
+        fprintf(debugFile, "Ach: %d ", anchorNumber); 
+        fprintf(debugFile, "Tnoise: %lu ", Tnoise);
+        fprintf(debugFile, "Trxlast: %lu ", Trxlast);
+        fprintf(debugFile, "TbtwnOffset: %lu ", TbtwnOffset);
+        fprintf(debugFile, "Tslot: %lu ", ((Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot));       
+        fprintf(debugFile, "Trx+n: %lu ", (Trx + Tnoise));
+        fprintf(debugFile, "IstB%d  LastB%d\n ",PACKET_LENGTH * bufferNum, 
             (PACKET_LENGTH * bufferNum) + PACKET_LENGTH);
 
         Trxlast = Trx + Tnoise;
