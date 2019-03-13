@@ -202,11 +202,11 @@ void keyFromTxValue(char * password)
 
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
     uint64_t Trxlast = 0;
-    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of key 3.3nsec
-                                                   //210 NT ticks
+    uint64_t Tslot = 0.0000000047 * 975000 * 65536; //time width of each value of 
+                                                   //key 4.7nsec 300 NT ticks
     uint64_t Tnoise = 0;
     srand(time(0));
-    int margin = 10;   
+    int margin = 60;   //60
 
     FILE * debugFile;
     debugFile = fopen("Debug.txt","w");
@@ -216,12 +216,12 @@ void keyFromTxValue(char * password)
     {        
         fscanf(transmissionFile, "%lu" , &Trx);        
         
-        Tnoise = 0;//(rand() % ((Tslot + 1) - margin * 2)) - ((Tslot/2) + margin);         
+        Tnoise = (rand() % ((Tslot + 1) - margin * 2)) - ((Tslot/2) + margin);         
         
         if(bufferNum < 32)
         {
           receptionTime[receptionTimeindex] = 
-                        (Trx - Trxlast - TbtwnOffset + Tnoise) / Tslot; 
+                        (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
 
         fprintf(debugFile, "%d ", anchorNumber); 
@@ -236,7 +236,8 @@ void keyFromTxValue(char * password)
     }    
 
     printf("The Key Is: \n");
-    unsigned char * oBuf = calloc(1, MAX_CHARACTER_SIZE); 
+    unsigned char * oBuf = calloc(1, MAX_CHARACTER_SIZE);
+
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {        
         oBuf[i] = receptionTime[i];
