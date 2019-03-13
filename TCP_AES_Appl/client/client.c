@@ -202,11 +202,11 @@ void keyFromTxValue(char * password)
 
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
     uint64_t Trxlast = 0;
-    uint64_t Tslot = 0.0000000047 * 975000 * 65536; //time width of each value of 
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of 
                                                    //key 4.7nsec 300 NT ticks
     uint64_t Tnoise = 0;
     srand(time(0));
-    int margin = 60;   //60
+    int margin = -10 ;   //60
 
     FILE * debugFile;
     debugFile = fopen("Debug.txt","w");
@@ -224,13 +224,13 @@ void keyFromTxValue(char * password)
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
 
-        fprintf(debugFile, "Ach: %d ", anchorNumber); 
-        fprintf(debugFile, "Tnoise: %lu ", Tnoise);
-        fprintf(debugFile, "Trxlast: %lu ", Trxlast);
-        fprintf(debugFile, "TbtwnOffset: %lu ", TbtwnOffset);
-        fprintf(debugFile, "Tslot: %lu ", ((Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot));       
-        fprintf(debugFile, "Trx+n: %lu ", (Trx + Tnoise));
-        fprintf(debugFile, "IstB%d  LastB%d\n ",PACKET_LENGTH * bufferNum, 
+        fprintf(debugFile, "Ach: %-5d ", anchorNumber); 
+        fprintf(debugFile, "Tslot: %-5lu ", ((Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot));
+        fprintf(debugFile, "Tnoise: %-5d ", (int)Tnoise);
+        fprintf(debugFile, "Trx+n: %-15lu ", (Trx + Tnoise));
+        fprintf(debugFile, "Trxlast: %-15lu ", Trxlast);
+        fprintf(debugFile, "TbtwnOffset: %-15lu ", TbtwnOffset);       
+        fprintf(debugFile, "IstB %-10d  LastB %-10d\n",PACKET_LENGTH * bufferNum, 
             (PACKET_LENGTH * bufferNum) + PACKET_LENGTH);
 
         Trxlast = Trx + Tnoise;

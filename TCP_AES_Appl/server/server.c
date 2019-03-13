@@ -189,7 +189,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
                              //319488000 (NT ticks)
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536; //time between each of my seg
                              //159744000 (NT ticks)
-    uint64_t Tslot = 0.0000000047 * 975000 * 65536; //time width of each value 
+    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value 
                              //of key 4.7nsec 300 NT ticks
     uint64_t TdistA = (dA/C) * 975000 * 65536 ;
     uint64_t TdistB = (dB/C) * 975000 * 65536;
@@ -251,8 +251,8 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
           fprintf(transmissionFile, "%d ", 0); 
 
           fprintf(debugFile, "Ach#: %d ", 0);
-          fprintf(debugFile, "Slot: %d ", Slot);
-          fprintf(debugFile, "Tslot+d: %d ", (int)(TdistA + ((Slot + 0.5) * Tslot)));
+          fprintf(debugFile, "Slot: %-5d ", Slot);
+          fprintf(debugFile, "Tslot+d: %-10d ", (int)(TdistA + ((Slot + 0.5) * Tslot)));
         }
         else if (rand() % 3 == 0)
         {
@@ -262,8 +262,8 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
           fprintf(transmissionFile, "%d ", 1); 
 
           fprintf(debugFile, "Ach#: %d ", 1);
-          fprintf(debugFile, "Slot: %d ", Slot);
-          fprintf(debugFile, "Tslot+d: %d ", (int)(TdistB + ((Slot + 0.5) * Tslot)));
+          fprintf(debugFile, "Slot: %-5d ", Slot);
+          fprintf(debugFile, "Tslot+d: %-10d ", (int)(TdistB + ((Slot + 0.5) * Tslot)));
         }
         else 
         {
@@ -273,13 +273,13 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
           fprintf(transmissionFile, "%d ", 2); 
 
           fprintf(debugFile, "Ach#: %d ", 2);
-          fprintf(debugFile, "Slot: %d ", Slot);
-          fprintf(debugFile, "Tslot+d: %d ", (int)(TdistC + ((Slot + 0.5) * Tslot)));         
+          fprintf(debugFile, "Slot: %-5d ", Slot);
+          fprintf(debugFile, "Tslot+d: %-10d ", (int)(TdistC + ((Slot + 0.5) * Tslot)));         
         }
               
         fprintf(transmissionFile, "%lu\n",Tx);
 
-        fprintf(debugFile, "1stB: %d LastB: %d\n",bufferNumOld, bufferNum);        
+        fprintf(debugFile, "1stB: %-10d LastB: %-10d\n",bufferNumOld, bufferNum);        
 
         Ttxlast = Tx;
         i++;
