@@ -202,11 +202,11 @@ void keyFromTxValue(char * password)
 
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
     uint64_t Trxlast = 0;
-    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value of 
-                                                   //key 4.7nsec 300 NT ticks
+    uint64_t Tslot = 0.00000000667 * 975000 * 65536; //time width of each value of 
+                                                   //key 6.67nsec 426 NT ticks
     uint64_t Tnoise = 0;
     srand(time(0));
-    int margin = -10 ;   //60
+    int margin = 120 ;   //60
 
     FILE * debugFile;
     debugFile = fopen("Debug.txt","w");
@@ -216,7 +216,7 @@ void keyFromTxValue(char * password)
     {        
         fscanf(transmissionFile, "%lu" , &Trx);        
         
-        Tnoise = (rand() % ((Tslot + 1) - margin * 2)) - ((Tslot/2) + margin);         
+        Tnoise = (rand() % (2 * ((Tslot/2) - margin + 1))) - ((Tslot/2) - margin + 1);         
         
         if(bufferNum < 32)
         {

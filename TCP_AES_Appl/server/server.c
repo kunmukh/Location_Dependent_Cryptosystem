@@ -189,8 +189,8 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
                              //319488000 (NT ticks)
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536; //time between each of my seg
                              //159744000 (NT ticks)
-    uint64_t Tslot = 0.0000000033 * 975000 * 65536; //time width of each value 
-                             //of key 4.7nsec 300 NT ticks
+    uint64_t Tslot = 0.00000000667 * 975000 * 65536; //time width of each value 
+                             //of key 6.67nsec 300 NT ticks
     uint64_t TdistA = (dA/C) * 975000 * 65536 ;
     uint64_t TdistB = (dB/C) * 975000 * 65536;
     uint64_t TdistC = (dC/C) * 975000 * 65536;
