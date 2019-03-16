@@ -203,7 +203,7 @@ void keyFromTxValue(char * password)
     transmissionFile = fopen("receptionTx.dat","r");
 
     int anchorNumber = 0;
-    int  * receptionTime = calloc(1, MAX_CHARACTER_SIZE);
+    int  * receptionTime = calloc(1, SHA256_DIGEST_LENGTH);
     uint64_t Trx = 0;
     int receptionTimeindex = 0;    
 
@@ -219,12 +219,12 @@ void keyFromTxValue(char * password)
     debugFile = fopen("Debug.txt","w");
     int bufferNum = 0;
 
-    int * receptionTime1 = calloc(1, MAX_CHARACTER_SIZE);
-    int * receptionTime2 = calloc(1, MAX_CHARACTER_SIZE);
-    int * receptionTime3 = calloc(1, MAX_CHARACTER_SIZE);
-    int * receptionTime4 = calloc(1, MAX_CHARACTER_SIZE);
-    int * receptionTime5 = calloc(1, MAX_CHARACTER_SIZE);
-    int * receptionTime6 = calloc(1, MAX_CHARACTER_SIZE);
+    int * receptionTime1 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime2 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime3 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime4 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime5 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime6 = calloc(1, SHA256_DIGEST_LENGTH);
 
     while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
     {        
@@ -232,32 +232,38 @@ void keyFromTxValue(char * password)
         
         Tnoise = (rand() % (2 * ((Tslot/2) - margin + 1))) - ((Tslot/2) - margin + 1);         
         
-        if(bufferNum > 32 * 0 && bufferNum < 32 * 1)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 0 
+          && bufferNum < SHA256_DIGEST_LENGTH * 1)
         {
           receptionTime1[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
-        if(bufferNum > 32 * 1 && bufferNum < 32 * 2)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 1 
+          && bufferNum < SHA256_DIGEST_LENGTH * 2)
         {
           receptionTime2[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
-        if(bufferNum > 32 * 2 && bufferNum < 32 * 3)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 2 
+          && bufferNum < SHA256_DIGEST_LENGTH * 3)
         {
           receptionTime3[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
-        if(bufferNum > 32 * 3 && bufferNum < 32 * 4)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 3 
+          && bufferNum < SHA256_DIGEST_LENGTH * 4)
         {
           receptionTime4[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
-        if(bufferNum > 32 * 4 && bufferNum < 32 * 5)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 4 
+          && bufferNum < SHA256_DIGEST_LENGTH * 5)
         {
           receptionTime5[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
-        if(bufferNum > 32 * 5 && bufferNum < 32 * 6)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 5 
+          && bufferNum < SHA256_DIGEST_LENGTH * 6)
         {
           receptionTime6[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
@@ -273,8 +279,9 @@ void keyFromTxValue(char * password)
             (PACKET_LENGTH * bufferNum) + PACKET_LENGTH);
 
         Trxlast = Trx + Tnoise;
+
         receptionTimeindex++;
-        if (receptionTimeindex % 32 == 0) 
+        if (receptionTimeindex == 32 == 0) 
         {
           receptionTimeindex = 0;
         }
