@@ -55,6 +55,13 @@ void playSong ();
 
 int64_t S64(const char *s);
 
+void getTheCorrectAESKey(int * receptionTime, int * receptionTime1,
+                         int * receptionTime2,int * receptionTime3,
+                         int * receptionTime4,int * receptionTime5,
+                         int * receptionTime6);
+
+int strncmpInt(int * arr1, int * arr2);
+
 int main(int argc, char const *argv[])
 {
 	  //check to see if all the argv is entred
@@ -196,7 +203,7 @@ void keyFromTxValue(char * password)
     transmissionFile = fopen("receptionTx.dat","r");
 
     int anchorNumber = 0;
-    int receptionTime[MAX_TIME_ANCHOR] = {'0'};
+    int  * receptionTime = calloc(1, SHA256_DIGEST_LENGTH);
     uint64_t Trx = 0;
     int receptionTimeindex = 0;    
 
@@ -212,15 +219,53 @@ void keyFromTxValue(char * password)
     debugFile = fopen("Debug.txt","w");
     int bufferNum = 0;
 
+    int * receptionTime1 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime2 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime3 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime4 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime5 = calloc(1, SHA256_DIGEST_LENGTH);
+    int * receptionTime6 = calloc(1, SHA256_DIGEST_LENGTH);
+
     while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
     {        
         fscanf(transmissionFile, "%lu" , &Trx);        
         
         Tnoise = (rand() % (2 * ((Tslot/2) - margin + 1))) - ((Tslot/2) - margin + 1);         
         
-        if(bufferNum < 32)
+        if(bufferNum > SHA256_DIGEST_LENGTH * 0 
+          && bufferNum < SHA256_DIGEST_LENGTH * 1)
         {
-          receptionTime[receptionTimeindex] = 
+          receptionTime1[receptionTimeindex] = 
+                        (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
+        }
+        if(bufferNum > SHA256_DIGEST_LENGTH * 1 
+          && bufferNum < SHA256_DIGEST_LENGTH * 2)
+        {
+          receptionTime2[receptionTimeindex] = 
+                        (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
+        }
+        if(bufferNum > SHA256_DIGEST_LENGTH * 2 
+          && bufferNum < SHA256_DIGEST_LENGTH * 3)
+        {
+          receptionTime3[receptionTimeindex] = 
+                        (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
+        }
+        if(bufferNum > SHA256_DIGEST_LENGTH * 3 
+          && bufferNum < SHA256_DIGEST_LENGTH * 4)
+        {
+          receptionTime4[receptionTimeindex] = 
+                        (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
+        }
+        if(bufferNum > SHA256_DIGEST_LENGTH * 4 
+          && bufferNum < SHA256_DIGEST_LENGTH * 5)
+        {
+          receptionTime5[receptionTimeindex] = 
+                        (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
+        }
+        if(bufferNum > SHA256_DIGEST_LENGTH * 5 
+          && bufferNum < SHA256_DIGEST_LENGTH * 6)
+        {
+          receptionTime6[receptionTimeindex] = 
                         (Trx + Tnoise - Trxlast - TbtwnOffset) / Tslot; 
         }
 
@@ -234,9 +279,17 @@ void keyFromTxValue(char * password)
             (PACKET_LENGTH * bufferNum) + PACKET_LENGTH);
 
         Trxlast = Trx + Tnoise;
+
         receptionTimeindex++;
+        if (receptionTimeindex == 32 == 0) 
+        {
+          receptionTimeindex = 0;
+        }
         bufferNum++;
     }    
+
+    getTheCorrectAESKey(receptionTime, receptionTime1, receptionTime2, receptionTime3,
+                        receptionTime4, receptionTime5, receptionTime6);
 
     printf("The Key Is: \n");
     unsigned char * oBuf = calloc(1, MAX_CHARACTER_SIZE);
@@ -259,6 +312,14 @@ void keyFromTxValue(char * password)
     
     fclose(transmissionFile);    
     fclose(debugFile);
+
+    free(receptionTime);
+    free(receptionTime1);
+    free(receptionTime2);
+    free(receptionTime3);
+    free(receptionTime4);
+    free(receptionTime5);
+    free(receptionTime6);
     printf("\nThe Key extraction Process Ended\n");               
 }
 
@@ -381,4 +442,165 @@ void playSong(void)
   pclose (playResultAudio);
 }
 
+void getTheCorrectAESKey(int * receptionTime, int * receptionTime1,
+                         int * receptionTime2,int * receptionTime3,
+                         int * receptionTime4,int * receptionTime5,
+                         int * receptionTime6)
+{
+  int recp1count = 0, recp2count = 0,
+      recp3count = 0, recp4count = 0,
+      recp5count = 0, recp6count = 0;
+
+  if (strncmpInt(receptionTime1, receptionTime2) == 0)
+  {
+    recp1count++;
+    recp2count++;
+  }
+  if (strncmpInt(receptionTime1, receptionTime3) == 0)
+  {
+    recp1count++;
+    recp3count++;
+  }
+  if (strncmpInt(receptionTime1, receptionTime4) == 0)
+  {
+    recp1count++;
+    recp4count++;
+  }
+  if (strncmpInt(receptionTime1, receptionTime5) == 0)
+  {
+    recp1count++;
+    recp5count++;
+  }
+  if (strncmpInt(receptionTime1, receptionTime6) == 0)
+  {
+    recp1count++;
+    recp6count++;
+  }
+
+  if (strncmpInt(receptionTime2, receptionTime3) == 0)
+  {
+    recp2count++;
+    recp3count++;
+  }
+  if (strncmpInt(receptionTime2, receptionTime4) == 0)
+  {
+    recp2count++;
+    recp4count++;
+  }
+  if (strncmpInt(receptionTime2, receptionTime5) == 0)
+  {
+    recp2count++;
+    recp5count++;
+  }
+  if (strncmpInt(receptionTime2, receptionTime6) == 0)
+  {
+    recp2count++;
+    recp6count++;
+  }
+
+  if (strncmpInt(receptionTime3, receptionTime4) == 0)
+  {
+    recp3count++;
+    recp4count++;
+  }
+  if (strncmpInt(receptionTime3, receptionTime5) == 0)
+  {
+    recp3count++;
+    recp5count++;
+  }
+  if (strncmpInt(receptionTime3, receptionTime6) == 0)
+  {
+    recp3count++;
+    recp6count++;
+  }
+
+  if (strncmpInt(receptionTime4, receptionTime5) == 0)
+  {
+    recp4count++;
+    recp5count++;
+  }
+  if (strncmpInt(receptionTime4, receptionTime6) == 0)
+  {
+    recp4count++;
+    recp6count++;
+  }
+
+  if (strncmpInt(receptionTime5, receptionTime6) == 0)
+  {
+    recp5count++;
+    recp6count++;
+  }
+
+  int arrayLIndex = 0;
+
+  int array[6] = {recp1count, recp2count, recp3count,
+                  recp4count, recp5count, recp6count};
+
+  int largest = array[0];
+ 
+  for (int i = 1; i < 6; i++) 
+  {
+    if (largest < array[i])
+    {      
+        largest = array[i];
+        arrayLIndex = i;
+    }
+  }
+
+  if (arrayLIndex == 1)
+  {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        receptionTime[i] = receptionTime1[i];
+    }
+  }
+  if (arrayLIndex == 2)
+  {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        receptionTime[i] = receptionTime2[i];
+    }
+  }
+  if (arrayLIndex == 3)
+  {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        receptionTime[i] = receptionTime3[i];
+    }
+  }
+  if (arrayLIndex == 4)
+  {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        receptionTime[i] = receptionTime4[i];
+    }
+  }
+  if (arrayLIndex == 5)
+  {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        receptionTime[i] = receptionTime5[i];
+    }
+  }
+  if (arrayLIndex == 6)
+  {
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {        
+        receptionTime[i] = receptionTime6[i];
+    }
+  }  
+}
+
+int strncmpInt(int * arr1, int * arr2)
+{
+  for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+  {
+    if (arr1[i] != arr2[i])
+    {
+      return -1;
+    }
+  }
+
+  return  0;
+}
 
