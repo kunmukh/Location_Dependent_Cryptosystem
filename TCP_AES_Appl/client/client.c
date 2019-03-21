@@ -184,9 +184,10 @@ int tcpServiceRoutine()
 
         counter++;
 
-        memset(buffer, 0, sizeof(char) * 3000);
-        memset(txBuff, 0, sizeof(char) * 21);
+        memset(buffer, 0, sizeof(char) * 3000);        
         memset(anchorNumberbuff, 0, sizeof(char) * 21);
+        memset(firstByteNumberbuff, 0, sizeof(char) * 21);
+        memset(txBuff, 0, sizeof(char) * 21);
         memset(dataBuff,0, sizeof(char) * PACKET_LENGTH);        
     } 
     

@@ -424,6 +424,7 @@ void TCPServiceRoutine()
 
       memset(buffer, 0, sizeof(char) * 1024);     
       memset(anchorNumberbuff, 0, sizeof(char) * 21);
+      memset(firstByteNumberbuff, 0, sizeof(char) * 21);
       memset(txBuff, 0, sizeof(char) * 21);
       memset(dataBuff, 0, sizeof(char) * PACKET_LENGTH);
 
