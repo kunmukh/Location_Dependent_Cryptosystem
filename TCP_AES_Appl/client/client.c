@@ -28,7 +28,7 @@
 #define MAX_CHARACTER_SIZE 32
 #define MAX_TIME_ANCHOR 32
 #define C 300000000
-#define PACKET_LENGTH 900
+#define PACKET_LENGTH 1984
 
 
 //the decrypt function
@@ -87,7 +87,7 @@ int tcpServiceRoutine()
     int sock = 0; 
     struct sockaddr_in serv_addr; 
     char *hello = "Hello from client"; 
-    char buffer[1024] = {0}; 
+    char buffer[3000] = {0}; 
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     { 
@@ -122,10 +122,12 @@ int tcpServiceRoutine()
     int counter = 0;
 
     uint64_t anchorNumber = 0;
-    uint64_t tx = 0;      
-
-    char txBuff[21]= {0};
-    char anchorNumberbuff[21]= {0};    
+    uint64_t firstByteNumber = 0;
+    uint64_t tx = 0;     
+    
+    char anchorNumberbuff[21]= {0};
+    char firstByteNumberbuff[21]= {0};  
+    char txBuff[21]= {0};  
     char dataBuff[PACKET_LENGTH]= {0};
 
     int index = 0;
@@ -136,10 +138,10 @@ int tcpServiceRoutine()
     FILE * encrFile;
     encrFile = fopen("EncrFileOutput.txt","w");    
 
-    while (read( sock , buffer, 1024) > 1)
+    while (read( sock , buffer, 3000) > 1)
     {
-        printf("\n\nPacket Content: AcNum:%s Tx:%s Packet:%d\n", 
-          &buffer[0], &buffer[50], counter);
+        printf("\n\nPacket Content: AcNum:%s First Byte:%s Tx:%s Packet:%d\n", 
+          &buffer[0], &buffer[22], &buffer[50], counter);
         /*printf(" Data: ");     
         for(int i = 0; i < PACKET_LENGTH; i++){printf("%d ", buffer[100+i]);}
         printf("\n");*/
@@ -147,6 +149,9 @@ int tcpServiceRoutine()
         index = 0;
         for(int i = 0;  i < 0 + 22; i++)
             {anchorNumberbuff[index] = buffer[i]; index++;}
+        index = 0;
+        for(int i = 22;  i < 22 + 22; i++)
+            {firstByteNumberbuff[index] = buffer[i]; index++;}
         index = 0;        
         for(int i = 50; i < 50 + 22; i++)
             {txBuff[index] = buffer[i]; index++;}
@@ -157,14 +162,18 @@ int tcpServiceRoutine()
         index = 0;
         
         anchorNumber =  S64(anchorNumberbuff);
+        firstByteNumber = S64(firstByteNumberbuff);
         tx = S64(txBuff);               
 
         printf("Anchor Number: %lu\n", anchorNumber);
-        printf("Tx: %lu\n", tx);        
+        printf("First Byte Number: %lu\n", firstByteNumber);
+        printf("Tx: %lu\n", tx);  
+        printf("First Byte Num: %lu\n", tx);      
 
         
         fprintf(receptionFile, "%lu ", anchorNumber);
-        fprintf(receptionFile, "%lu\n",tx);          
+        fprintf(receptionFile, "%lu ",tx);   
+        fprintf(receptionFile, "%lu\n", firstByteNumber);     
 
 
         for(int i = 0; i < PACKET_LENGTH; i++)
@@ -175,7 +184,7 @@ int tcpServiceRoutine()
 
         counter++;
 
-        memset(buffer, 0, sizeof(char) * 1024);
+        memset(buffer, 0, sizeof(char) * 3000);
         memset(txBuff, 0, sizeof(char) * 21);
         memset(anchorNumberbuff, 0, sizeof(char) * 21);
         memset(dataBuff,0, sizeof(char) * PACKET_LENGTH);        
@@ -197,7 +206,7 @@ void keyFromTxValue(char * password)
 
     int anchorNumber = 0;
     int receptionTime[MAX_TIME_ANCHOR] = {'0'};
-    uint64_t Trx = 0;
+    uint64_t Trx = 0, firstByteNumber = 0;
     int receptionTimeindex = 0;    
 
     uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
@@ -214,7 +223,8 @@ void keyFromTxValue(char * password)
 
     while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
     {        
-        fscanf(transmissionFile, "%lu" , &Trx);        
+        fscanf(transmissionFile, "%lu" , &Trx);  
+        fscanf(transmissionFile, "%lu" , &firstByteNumber);      
         
         Tnoise = (rand() % (2 * ((Tslot/2) - margin + 1))) - ((Tslot/2) - margin + 1);         
         
@@ -230,8 +240,7 @@ void keyFromTxValue(char * password)
         fprintf(debugFile, "Trx+n: %-15lu ", (Trx + Tnoise));
         fprintf(debugFile, "Trxlast: %-15lu ", Trxlast);
         fprintf(debugFile, "TbtwnOffset: %-15lu ", TbtwnOffset);       
-        fprintf(debugFile, "IstB %-10d  LastB %-10d\n",PACKET_LENGTH * bufferNum, 
-            (PACKET_LENGTH * bufferNum) + PACKET_LENGTH);
+        fprintf(debugFile, "IstB %-10lu\n", firstByteNumber);
 
         Trxlast = Trx + Tnoise;
         receptionTimeindex++;

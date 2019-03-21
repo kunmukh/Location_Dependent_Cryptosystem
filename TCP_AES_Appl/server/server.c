@@ -30,7 +30,7 @@
 #define MAX_CHARACTER_SIZE 32
 #define MAX_TIME_ANCHOR 32
 #define C 300000000
-#define PACKET_LENGTH 900
+#define PACKET_LENGTH 1984
 
 //the encrypt function
 int encrypt(
@@ -38,8 +38,7 @@ int encrypt(
     int buffer_len, /* Because the plaintext could include null bytes*/
     char* IV, //initilization vector
     char* key,
-    int key_len 
-);
+    int key_len);
 
 //cipher text displyer
 void printEncryptedFile(char* ciphertext, 
@@ -357,28 +356,29 @@ void TCPServiceRoutine()
 
   int counter = 0;
 
-  char packet [1024] = {0};
-  memset(packet, 0, sizeof(char) * 1024);
+  char packet [3000] = {0};
+  memset(packet, 0, sizeof(char) * 3000);
   FILE * txFile;
   txFile = fopen("transmission.dat","r");
   FILE * dataFile;
   dataFile = fopen("EncrFileOutput.txt","r");
 
   uint64_t anchorNumber = 0;
-  uint64_t Tx = 0, Txstart = 0;  
-  int data = 0;
-
-  char txBuff[21]= {0};
-  char anchorNumberbuff[21]= {0};
+  uint64_t Tx = 0, Txstart = 0, firstByteNumber = 0;  
+  int data = 0;  
   
+  char anchorNumberbuff[21]= {0}; 
+  char firstByteNumberbuff[21]= {0};
+  char txBuff[21]= {0}; 
   char dataBuff[PACKET_LENGTH]={0};
+
   int breakflag = 0;
 
   fscanf(txFile, "%lu" , &Txstart);
 
   while (read( new_socket , buffer, 1024) > 1)
   {        
-      memset(packet, 0, sizeof(char) * 1000);
+      memset(packet, 0, sizeof(char) * 3000);
 
       printf("%s\n",buffer);
 
@@ -399,15 +399,18 @@ void TCPServiceRoutine()
       fscanf(txFile, "%lu" , &anchorNumber);      
       sprintf(anchorNumberbuff, "%" PRIu64, anchorNumber);
 
+      sprintf(firstByteNumberbuff, "%" PRIu64, firstByteNumber);
+
       fscanf(txFile, "%lu" , &Tx);
-      sprintf(txBuff, "%" PRIu64, Tx);        
+      sprintf(txBuff, "%" PRIu64, Tx);              
 
       memcpy(&packet[0], anchorNumberbuff, sizeof(anchorNumberbuff));
+      memcpy(&packet[22], firstByteNumberbuff, sizeof(firstByteNumberbuff));
       memcpy(&packet[50], txBuff, sizeof(txBuff));      
       memcpy(&packet[100], dataBuff, sizeof(dataBuff));     
 
-      printf("\n\nPacket Content: AcNum:%s Tx:%s Counter:%d\n", &packet[0], 
-        &packet[50], counter);
+      printf("\n\nPacket Content: AcNum:%s firstByte:%s Tx:%s Counter:%d\n", &packet[0], 
+       &packet[22], &packet[50], counter);
       /*printf(" Data: ");     
       for(int i = 0; i < PACKET_LENGTH; i++){printf("%d ", packet[100+i]);}
       printf("\n");*/
@@ -415,10 +418,11 @@ void TCPServiceRoutine()
       send(new_socket , packet , sizeof(packet) , 0 ); 
       printf("Message sent\n");      
 
-      counter++;        
+      counter++;   
+      firstByteNumber += PACKET_LENGTH;
+      if (firstByteNumber > 32 * PACKET_LENGTH){firstByteNumber = 0;}      
 
-      memset(buffer, 0, sizeof(char) * 1024);
-      memset(packet, 0, sizeof(char) * 1024);
+      memset(buffer, 0, sizeof(char) * 1024);     
       memset(anchorNumberbuff, 0, sizeof(char) * 21);
       memset(txBuff, 0, sizeof(char) * 21);
       memset(dataBuff, 0, sizeof(char) * PACKET_LENGTH);
