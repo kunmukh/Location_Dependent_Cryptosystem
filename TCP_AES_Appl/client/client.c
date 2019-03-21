@@ -369,7 +369,7 @@ int64_t S64(const char *s)
     // TBD about extra data found
     return i;
     }
-  // TBD failed to scan;  
+  // TBD has failed to scan;  
   return 0;  
 }
 

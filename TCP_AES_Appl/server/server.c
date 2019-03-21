@@ -173,8 +173,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
     int oTx [MAX_CHARACTER_SIZE] = {'0'};
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
-        oTx[i] = obuf[i];
-        //printf("%d\n", oTx[i]);
+        oTx[i] = obuf[i];        
     }
     
     int dA = atoi(d1);    
