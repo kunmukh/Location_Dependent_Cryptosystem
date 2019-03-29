@@ -20,6 +20,7 @@
 #define MAX_TIME_ANCHOR 32
 #define C 300000000
 #define PACKET_LENGTH 1984
+#define TRANSMISSION_FILE "transmission.dat"//"receptionTx.dat"
 
 
 //the decrypt function
@@ -76,7 +77,7 @@ void keyFromTxValue(char * password)
     printf("\nThe Key extraction Process Started\n");
 
     FILE * transmissionFile;
-    transmissionFile = fopen("receptionTx.dat","r");
+    transmissionFile = fopen(TRANSMISSION_FILE,"r");
 
     int anchorNumber = 0;
     int receptionTime[MAX_TIME_ANCHOR] = {'0'};

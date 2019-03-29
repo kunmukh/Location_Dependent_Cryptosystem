@@ -227,7 +227,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
         {       
           Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + ((Slot + 0.5) * Tslot); 
           Tdistlast = TdistA;
-          printf("AES: %02x Slot: %d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
+          printf("AES: %02x Slot: %-3d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 0); 
 
           fprintf(debugFile, "Ach#: %d ", 0);
@@ -238,7 +238,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
         {
           Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + ((Slot + 0.5) * Tslot);
           Tdistlast = TdistB; 
-          printf("AES: %02x Slot: %d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
+          printf("AES: %02x Slot: %-3d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 1); 
 
           fprintf(debugFile, "Ach#: %d ", 1);
@@ -249,7 +249,7 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
         {
           Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + ((Slot + 0.5) * Tslot); 
           Tdistlast = TdistC;
-          printf("AES: %02x Slot: %d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
+          printf("AES: %02x Slot: %-3d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
           fprintf(transmissionFile, "%d ", 2); 
 
           fprintf(debugFile, "Ach#: %d ", 2);
