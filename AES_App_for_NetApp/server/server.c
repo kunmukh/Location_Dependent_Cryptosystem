@@ -41,8 +41,8 @@ void printEncryptedFile(char* ciphertext,
 void audioToAESConversion(char const * pass);
 
 //create the Tx values
-void txValueFromKey(char const * key, char const * d1, 
-                    char const * d2, char const * d3);
+void theAESKey(char const * key);
+
 int main(int argc, char const *argv[])
 {
 	  //check to see if all the argv is entred
@@ -52,9 +52,9 @@ int main(int argc, char const *argv[])
       return 0;
     }  
 
-    audioToAESConversion(argv[1]);
+    audioToAESConversion(argv[1]);    
 
-    txValueFromKey(argv[1], argv[2], argv[3], argv[4]);
+    theAESKey(argv[1]);
 
     return 0;
 }	
@@ -131,10 +131,10 @@ void audioToAESConversion(char const * key)
     free(keyEncr);
 }
 
-//the function that creates the Tx values
-void txValueFromKey(char const * key,char const * d1, char const * d2, char const * d3)
+//the function that prints the AES value
+void theAESKey(char const * key)
 {
-    printf("\nTx Value Creation starts \n");
+	printf("\nThe AES Code\n");
 
     //input buffer
     char * ibuf = calloc(1, MAX_CHARACTER_SIZE);  
@@ -150,140 +150,15 @@ void txValueFromKey(char const * key,char const * d1, char const * d2, char cons
     }
     printf("\n\n");
 
-    //create the Tx array
-    int oTx [MAX_CHARACTER_SIZE] = {'0'};
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
-    {
-        oTx[i] = obuf[i];        
-    }
-    
-    int dA = atoi(d1);    
-    int dB = atoi(d2);    
-    int dC = atoi(d3);
-
-    srand(time(0));
-
-    //Timing Variables
-    uint64_t Tnet = 97500 * 65536;
-    uint64_t TstartOffset = 0.005 * 975000 * 65536; //time for all the net pakt to go 5ms
-                             //319488000 (NT ticks)
-    uint64_t TbtwnOffset = 0.0025 * 975000 * 65536; //time between each of my seg
-                             //159744000 (NT ticks)
-    uint64_t Tslot = 0.00000000667 * 975000 * 65536; //time width of each value 
-                             //of key 6.67nsec 300 NT ticks
-    uint64_t TdistA = (dA/C) * 975000 * 65536 ;
-    uint64_t TdistB = (dB/C) * 975000 * 65536;
-    uint64_t TdistC = (dC/C) * 975000 * 65536;
-
-    uint64_t Tdistlast = 0;
-    uint64_t Ttxlast = 0;
-
-    uint64_t Tx = 0;
-    uint64_t Txfirst = 0;
-
-    //first transmission being sent    
-
-    int Slot = 0; 
-    printf("The Sequence of Transmission\n");
-
     FILE * transmissionFile;
     transmissionFile = fopen("transmission.dat","w");
 
-    //first transmission
-    Txfirst = Tnet + TstartOffset;
-    fprintf(transmissionFile, "%lu\n", Txfirst);
-
-    FILE * dataFile;
-    dataFile = fopen("EncrFileOutput.txt","r");
-    int i = 0, breakflag = 0, data = 0, numPak = 0;
-
-    FILE * debugFile;
-    debugFile = fopen("Debug.txt","w");    
-
-    int bufferNumOld = 0, bufferNum = 0;
-
-    while(1)    
-    {         
-      bufferNumOld = bufferNum;
-
-      for (int j = 0; j < PACKET_LENGTH; j++)
-      {
-        if (fscanf(dataFile, "%d", &data) != EOF)
-        {
-          bufferNum++;
-        }
-        else
-        {
-          breakflag = 1;
-          break;
-        }
-      }      
-
-      if (i < 32)
-      {
-        Slot = oTx[i];
-        
-        if (rand() % 2 == 0)
-        {       
-          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistA + ((Slot + 0.5) * Tslot); 
-          Tdistlast = TdistA;
-          printf("AES: %02x Slot: %-3d Anchor A: %lu \n", oTx[i], oTx[i], Tx);
-          fprintf(transmissionFile, "%d ", 0); 
-
-          fprintf(debugFile, "Ach#: %d ", 0);
-          fprintf(debugFile, "Slot: %-5d ", Slot);
-          fprintf(debugFile, "Tslot+d: %-10d ", (int)(TdistA + ((Slot + 0.5) * Tslot)));
-        }
-        else if (rand() % 3 == 0)
-        {
-          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistB + ((Slot + 0.5) * Tslot);
-          Tdistlast = TdistB; 
-          printf("AES: %02x Slot: %-3d Anchor B: %lu \n", oTx[i], oTx[i], Tx);
-          fprintf(transmissionFile, "%d ", 1); 
-
-          fprintf(debugFile, "Ach#: %d ", 1);
-          fprintf(debugFile, "Slot: %-5d ", Slot);
-          fprintf(debugFile, "Tslot+d: %-10d ", (int)(TdistB + ((Slot + 0.5) * Tslot)));
-        }
-        else 
-        {
-          Tx = Ttxlast + Tdistlast + TbtwnOffset - TdistC + ((Slot + 0.5) * Tslot); 
-          Tdistlast = TdistC;
-          printf("AES: %02x Slot: %-3d Anchor C: %lu \n", oTx[i], oTx[i], Tx);
-          fprintf(transmissionFile, "%d ", 2); 
-
-          fprintf(debugFile, "Ach#: %d ", 2);
-          fprintf(debugFile, "Slot: %-5d ", Slot);
-          fprintf(debugFile, "Tslot+d: %-10d ", (int)(TdistC + ((Slot + 0.5) * Tslot)));         
-        }
-              
-        fprintf(transmissionFile, "%lu ",Tx);
-        fprintf(transmissionFile, "%d\n",bufferNumOld);
-
-        fprintf(debugFile, "1stB: %-10d LastB: %-10d\n",bufferNumOld, bufferNum);        
-
-        Ttxlast = Tx;
-        i++;
-        numPak++;
-
-        if(i == 32)
-        {
-          i = 0;
-        }
-      }      
-
-      if(breakflag)
-      {
-        break;
-      }
-           
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
+    {
+        fprintf(transmissionFile, "%02x ", obuf[i]);               
     }
 
-    printf("Num Pak:%d\n",numPak);
-    fclose(transmissionFile);
-    fclose(dataFile);
-    fclose(debugFile);
-    printf("\nTx value have been created\n");    
+    fclose(transmissionFile);    
 }
 
 int encrypt(void* buffer, int buffer_len, char* IV, char* key, int key_len)
