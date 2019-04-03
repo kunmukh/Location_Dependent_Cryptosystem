@@ -151,7 +151,7 @@ void theAESKey(char const * key)
     printf("\n\n");
 
     FILE * transmissionFile;
-    transmissionFile = fopen("transmission.dat","w");
+    transmissionFile = fopen("key.dat","w");
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {

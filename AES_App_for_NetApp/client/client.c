@@ -20,7 +20,7 @@
 #define MAX_TIME_ANCHOR 32
 #define C 300000000
 #define PACKET_LENGTH 1984
-#define TRANSMISSION_FILE "transmission.dat"//"receptionTx.dat"
+#define KEY_FILE "key.dat"//"receptionTx.dat"
 
 
 //the decrypt function
@@ -34,7 +34,7 @@ int decrypt(
 
 void aesToAudioConversion(char const * pass);
 
-void keyFromTxValue(char * password);
+void keyFromFile(char * password);
 
 //cipher text displyer
 void printEncryptedFile(char* ciphertext, 
@@ -56,11 +56,9 @@ int main(int argc, char const *argv[])
     //local variable password storage
     char * password = calloc(1, SHA256_DIGEST_LENGTH);
    
-    printf("\n==Location-Dependent Algorithm==\n"); 
+    printf("\n==Location-Dependent Algorithm==\n");               
 
-    //receptionTx.dat          
-
-    keyFromTxValue(password);    
+    keyFromFile(password);    
 
     aesToAudioConversion(password);
    
@@ -72,51 +70,20 @@ int main(int argc, char const *argv[])
     return 0;
 } 
 
-void keyFromTxValue(char * password)
+void keyFromFile(char * password)
 {
-    printf("\nThe Key extraction Process Started\n");
-
     FILE * transmissionFile;
-    transmissionFile = fopen(TRANSMISSION_FILE,"r");
+    transmissionFile = fopen(KEY_FILE,"r");
+    
+    int receptionTime[MAX_TIME_ANCHOR] = {'0'}; 
+    int receptionTimeindex = 0;
 
-    int anchorNumber = 0;
-    int receptionTime[MAX_TIME_ANCHOR] = {'0'};
-    uint64_t Trx = 0, firstByteNumber = 0;
-    int receptionTimeindex = 0;    
-
-    uint64_t TbtwnOffset = 0.0025 * 975000 * 65536;
-    uint64_t Trxlast = 0;
-    uint64_t Tslot = 0.00000000667 * 975000 * 65536; //time width of each value of 
-                                                   //key 6.67nsec 426 NT ticks  
-    uint64_t Tfirst = 0; 
-
-    FILE * debugFile;
-    debugFile = fopen("Debug.txt","w");
-    int bufferNum = 0;
-
-    fscanf(transmissionFile, "%lu" , &Tfirst);
-    while(fscanf(transmissionFile, "%d" , &anchorNumber) != EOF)
+    int keyValue = 0;  
+    
+    while(fscanf(transmissionFile, "%x" , &keyValue) != EOF)
     {        
-        fscanf(transmissionFile, "%lu" , &Trx);  
-        fscanf(transmissionFile, "%lu" , &firstByteNumber);       
-        
-        if(bufferNum < 32)
-        {
-          receptionTime[receptionTimeindex] = 
-                        (Trx - Trxlast - TbtwnOffset) / Tslot; 
-        }
-
-        fprintf(debugFile, "Ach: %-5d ", anchorNumber); 
-        fprintf(debugFile, "Tslot: %-5lu ", ((Trx - Trxlast - TbtwnOffset) / Tslot));
-        //fprintf(debugFile, "Tnoise: %-5d ", (int)Tnoise);
-        fprintf(debugFile, "Trx+n: %-15lu ", (Trx));
-        fprintf(debugFile, "Trxlast: %-15lu ", Trxlast);
-        fprintf(debugFile, "TbtwnOffset: %-15lu ", TbtwnOffset);       
-        fprintf(debugFile, "IstB %-10lu\n", firstByteNumber);
-
-        Trxlast = Trx;
+        receptionTime[receptionTimeindex] = keyValue;
         receptionTimeindex++;
-        bufferNum++;
     }    
 
     printf("The Key Is: \n");
@@ -129,7 +96,7 @@ void keyFromTxValue(char * password)
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) 
     {
-        printf("%02x", oBuf[i]);
+        printf("%02x ", oBuf[i]);
     }
     printf("\n");    
        
@@ -138,9 +105,7 @@ void keyFromTxValue(char * password)
       password[i] = oBuf[i];;
     }   
     
-    fclose(transmissionFile);    
-    fclose(debugFile);
-    printf("\nThe Key extraction Process Ended\n");               
+    fclose(transmissionFile);                 
 }
 
 void aesToAudioConversion(char const * password)
